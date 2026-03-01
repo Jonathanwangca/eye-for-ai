@@ -101,6 +101,16 @@ if ( ! wp_next_scheduled( 'efa_cleanup_sessions' ) ) {
 add_action( 'plugins_loaded', function () {
     load_plugin_textdomain( 'eye-for-ai', false, dirname( EFA_PLUGIN_BASENAME ) . '/languages' );
 
+    // GitHub-based auto-updates.
+    if ( file_exists( EFA_PLUGIN_DIR . 'plugin-update-checker/plugin-update-checker.php' ) ) {
+        require_once EFA_PLUGIN_DIR . 'plugin-update-checker/plugin-update-checker.php';
+        \YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
+            'https://github.com/Jonathanwangca/eye-for-ai/',
+            EFA_PLUGIN_FILE,
+            'eye-for-ai'
+        );
+    }
+
     // Migrate from VFB to EFA if old tables exist
     global $wpdb;
     $old_table = $wpdb->prefix . 'vfb_sessions';
