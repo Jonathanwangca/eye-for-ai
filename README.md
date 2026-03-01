@@ -1,6 +1,12 @@
-# Eye for AI
+<p align="center">
+  <img src="assets/img/logo-512x512.png" alt="Eye for AI" width="200">
+</p>
 
-**WordPress visual feedback plugin with AI-friendly REST API.**
+<h1 align="center">Eye for AI</h1>
+
+<p align="center">
+  <strong>WordPress visual feedback plugin with AI-friendly REST API.</strong>
+</p>
 
 Visitors and team members annotate page elements, highlight text, and capture marked-up screenshots. All feedback is stored in the WordPress database with full URL, element position, and viewport context — ready for AI agents to consume and triage automatically.
 
