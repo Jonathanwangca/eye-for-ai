@@ -21,21 +21,30 @@
 
 .efa-toolbar-collapsed {
     position: relative;
-    width: 40px;
-    height: 40px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    width: 44px;
+    height: 44px;
+    background: white;
     border-radius: 50%;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 4px 15px rgba(0, 90, 170, 0.35);
     transition: all 0.3s ease;
+    border: 2px solid rgba(0, 120, 200, 0.15);
 }
 
 .efa-toolbar-collapsed:hover {
     transform: scale(1.1);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+    box-shadow: 0 6px 20px rgba(0, 90, 170, 0.5);
+    border-color: rgba(0, 120, 200, 0.3);
+}
+
+.efa-toolbar-collapsed .efa-logo-icon {
+    width: 34px;
+    height: 34px;
+    object-fit: contain;
+    border-radius: 50%;
 }
 
 .efa-toolbar-collapsed svg {
