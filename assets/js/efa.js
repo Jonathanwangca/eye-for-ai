@@ -1,5 +1,5 @@
 /**
- * Visual Feedback Tool
+ * Eye for AI Tool
  * 视觉反馈工具
  * Version: 1.5
  */
@@ -10,11 +10,12 @@
     // ========================================
     // Configuration from WordPress - 配置
     // ========================================
-    const cfg = window.VFBConfig || {};
+    const cfg = window.EFAConfig || {};
 
-    const VFB = {
+    const EFA = {
         version: cfg.version || '1.0.0',
         apiBase: cfg.apiBase || '/wp-json/eye-for-ai/v1',
+        apiMode: cfg.apiMode || 'rest',
         nonce: cfg.nonce || '',
         isActive: false,
         isDevMode: !!cfg.isAdmin,
@@ -82,7 +83,7 @@
             // Use getAttribute for className too to avoid similar issues
             const className = el.getAttribute && el.getAttribute('class');
             if (className && typeof className === 'string') {
-                const classes = className.trim().split(/\s+/).filter(c => !c.startsWith('vfb-') && /^[a-zA-Z_][a-zA-Z0-9_-]*$/.test(c));
+                const classes = className.trim().split(/\s+/).filter(c => !c.startsWith('efa-') && /^[a-zA-Z_][a-zA-Z0-9_-]*$/.test(c));
                 if (classes.length) {
                     selector += '.' + classes.slice(0, 2).join('.');
                 }
@@ -119,11 +120,11 @@
      * Show toast message
      */
     function showToast(message, type = 'default') {
-        const existing = document.querySelector('.vfb-toast');
+        const existing = document.querySelector('.efa-toast');
         if (existing) existing.remove();
 
         const toast = document.createElement('div');
-        toast.className = 'vfb-toast ' + type;
+        toast.className = 'efa-toast ' + type;
         toast.textContent = message;
         document.body.appendChild(toast);
 
@@ -156,56 +157,105 @@
     // ========================================
 
     /**
-     * WP REST API request helper.
-     * @param {string} endpoint - REST path relative to apiBase (e.g. '/annotations')
+     * Unified API request helper.
+     * Supports two modes via EFA.apiMode:
+     *   'rest'       — WordPress REST API (default)
+     *   'standalone' — Plain PHP with ?action= params
+     *
+     * @param {string} endpoint - REST-style path (e.g. '/annotations', '/annotations/42')
      * @param {object|null} data - Body or query params
      * @param {string} method - HTTP method
      */
     async function apiRequest(endpoint, data = null, method = 'GET') {
-        let url = VFB.apiBase.replace(/\/$/, '') + endpoint;
+        const apiMode = EFA.apiMode || 'rest';
 
-        const options = {
-            method: method,
-            headers: {
-                'X-WP-Nonce': VFB.nonce
-            },
-            credentials: 'same-origin'
-        };
+        let url, options;
 
-        if (method === 'GET' && data) {
-            const params = new URLSearchParams();
-            Object.keys(data).forEach(key => params.set(key, data[key]));
-            url += '?' + params.toString();
-        } else if (data && (method === 'POST' || method === 'PATCH' || method === 'DELETE')) {
-            options.headers['Content-Type'] = 'application/json';
-            options.body = JSON.stringify(data);
+        if (apiMode === 'standalone') {
+            // Standalone mode: map REST endpoints to ?action= params
+            const ACTIONS = {
+                'POST /session':       'init_session',
+                'GET /annotations':    'load',
+                'POST /annotations':   'save_one',
+                'DELETE /annotations/': 'delete',
+                'PATCH /annotations/': 'dev_update',
+                'POST /screenshots':   'upload_screenshot',
+                'GET /export':         'export_md'
+            };
+
+            // Build action key: strip trailing numeric ID for matching
+            const cleanEndpoint = endpoint.replace(/\/\d+$/, '/');
+            const actionKey = method + ' ' + cleanEndpoint;
+            const action = ACTIONS[actionKey] || ACTIONS[method + ' ' + endpoint] || 'load';
+
+            url = EFA.apiBase.replace(/\/$/, '') + '?action=' + action;
+
+            // For DELETE/PATCH with ID, add it as a param
+            const idMatch = endpoint.match(/\/(\d+)$/);
+            if (idMatch) {
+                url += '&id=' + idMatch[1];
+            }
+
+            options = {
+                method: (method === 'GET' || method === 'DELETE') ? method : 'POST',
+                credentials: 'same-origin'
+            };
+
+            if (method === 'GET' && data) {
+                const params = new URLSearchParams();
+                Object.keys(data).forEach(key => params.set(key, data[key]));
+                url += '&' + params.toString();
+            } else if (data) {
+                options.headers = { 'Content-Type': 'application/json' };
+                options.body = JSON.stringify(data);
+            }
+        } else {
+            // WordPress REST API mode
+            url = EFA.apiBase.replace(/\/$/, '') + endpoint;
+
+            options = {
+                method: method,
+                headers: {
+                    'X-WP-Nonce': EFA.nonce
+                },
+                credentials: 'same-origin'
+            };
+
+            if (method === 'GET' && data) {
+                const params = new URLSearchParams();
+                Object.keys(data).forEach(key => params.set(key, data[key]));
+                url += '?' + params.toString();
+            } else if (data && (method === 'POST' || method === 'PATCH' || method === 'DELETE')) {
+                options.headers['Content-Type'] = 'application/json';
+                options.body = JSON.stringify(data);
+            }
         }
 
-        if (VFB.debug) {
-            console.log('[VFB Debug] apiRequest:', { endpoint, url, method, data });
+        if (EFA.debug) {
+            console.log('[EFA Debug] apiRequest:', { endpoint, url, method, apiMode, data });
         }
 
         try {
             let response = await fetch(url, options);
 
-            // Nonce expired — refresh and retry once
-            if (response.status === 401 || response.status === 403) {
+            // Nonce expired — refresh and retry once (REST mode only)
+            if (apiMode === 'rest' && (response.status === 401 || response.status === 403)) {
                 const refreshed = await refreshNonce();
                 if (refreshed) {
-                    options.headers['X-WP-Nonce'] = VFB.nonce;
+                    options.headers['X-WP-Nonce'] = EFA.nonce;
                     response = await fetch(url, options);
                 }
             }
 
             const result = await response.json();
 
-            if (VFB.debug) {
-                console.log('[VFB Debug] apiResponse:', { endpoint, status: response.status, result });
+            if (EFA.debug) {
+                console.log('[EFA Debug] apiResponse:', { endpoint, status: response.status, result });
             }
 
             return result;
         } catch (error) {
-            console.error('VFB API Error:', error);
+            console.error('EFA API Error:', error);
             return { success: false, message: error.message };
         }
     }
@@ -215,31 +265,31 @@
      */
     async function refreshNonce() {
         try {
-            const resp = await fetch(VFB.apiBase.replace(/\/$/, '') + '/session', {
+            const resp = await fetch(EFA.apiBase.replace(/\/$/, '') + '/session', {
                 method: 'POST',
                 credentials: 'same-origin'
             });
             const data = await resp.json();
             if (data.success && data.nonce) {
-                VFB.nonce = data.nonce;
+                EFA.nonce = data.nonce;
                 return true;
             }
         } catch (e) {
-            console.error('[VFB] Nonce refresh failed:', e);
+            console.error('[EFA] Nonce refresh failed:', e);
         }
         return false;
     }
 
     async function loadAnnotations() {
         const params = { page_url: window.location.href };
-        if (VFB.isDevMode) {
+        if (EFA.isDevMode) {
             params.all = '1';
         }
 
         const result = await apiRequest('/annotations', params);
 
         if (result.success) {
-            VFB.annotations = (result.annotations || []).map(a => {
+            EFA.annotations = (result.annotations || []).map(a => {
                 // Map DB fields to frontend format
                 a.id = a.annotation_key || String(a.id);
                 a._db_id = a.id; // Keep DB id for API calls
@@ -252,7 +302,7 @@
             });
 
             // Re-map: use original response to get _db_id
-            VFB.annotations = (result.annotations || []).map(a => {
+            EFA.annotations = (result.annotations || []).map(a => {
                 // Parse element_position from JSON string
                 if (a.element_position && typeof a.element_position === 'string') {
                     try { a.element_position = JSON.parse(a.element_position); } catch (e) { /* ignore */ }
@@ -268,7 +318,7 @@
             renderAnnotationList();
             renderPageMarkers();
 
-            if (VFB.isDevMode && result.annotations) {
+            if (EFA.isDevMode && result.annotations) {
                 showToast(`Dev Mode: ${result.annotations.length} annotations`, 'default');
             }
         }
@@ -300,9 +350,9 @@
 
         if (!silent) {
             if (result.success) {
-                showToast(VFB.i18n.saved || 'Saved', 'success');
+                showToast(EFA.i18n.saved || 'Saved', 'success');
             } else {
-                showToast(VFB.i18n.error || 'Save failed', 'error');
+                showToast(EFA.i18n.error || 'Save failed', 'error');
             }
         }
         return result;
@@ -315,29 +365,29 @@
     }
 
     async function deleteAnnotation(annotationId) {
-        const ann = VFB.annotations.find(a => a.id === annotationId);
+        const ann = EFA.annotations.find(a => a.id === annotationId);
         const dbId = ann ? (ann._db_id || ann.id) : annotationId;
 
-        if (VFB.debug) {
-            console.log('[VFB Debug] deleteAnnotation:', { annotationId, dbId });
+        if (EFA.debug) {
+            console.log('[EFA Debug] deleteAnnotation:', { annotationId, dbId });
         }
 
         const result = await apiRequest('/annotations/' + dbId, null, 'DELETE');
 
         if (result.success) {
-            VFB.annotations = VFB.annotations.filter(a => a.id !== annotationId);
+            EFA.annotations = EFA.annotations.filter(a => a.id !== annotationId);
             renderAnnotationList();
             renderPageMarkers();
-            showToast(VFB.i18n.deleted || 'Deleted', 'success');
+            showToast(EFA.i18n.deleted || 'Deleted', 'success');
         } else {
-            showToast(result.message || VFB.i18n.error || 'Delete failed', 'error');
+            showToast(result.message || EFA.i18n.error || 'Delete failed', 'error');
         }
     }
 
     async function exportMarkdown() {
         try {
             // 首先检查是否有标注数据
-            if (!VFB.annotations || VFB.annotations.length === 0) {
+            if (!EFA.annotations || EFA.annotations.length === 0) {
                 showToast('No annotations to export / 没有标注可导出', 'warning');
                 return;
             }
@@ -355,10 +405,10 @@
             } else {
                 const errorMsg = result.message || 'Export failed / 导出失败';
                 showToast(errorMsg, 'error');
-                console.error('VFB Export MD Error:', result);
+                console.error('EFA Export MD Error:', result);
             }
         } catch (error) {
-            console.error('VFB Export Error:', error);
+            console.error('EFA Export Error:', error);
             showToast('Export error / 导出出错', 'error');
         }
     }
@@ -366,33 +416,33 @@
     // 显示 Markdown 内容的模态框（剪贴板失败时的备用方案）
     function showMarkdownModal(markdown) {
         const modalOverlay = document.createElement('div');
-        modalOverlay.className = 'vfb-modal-overlay';
+        modalOverlay.className = 'efa-modal-overlay';
         modalOverlay.innerHTML = `
-            <div class="vfb-modal" style="max-width: 600px;">
-                <div class="vfb-modal-header">
-                    <div class="vfb-modal-title">📋 Markdown Content</div>
-                    <button class="vfb-modal-close">&times;</button>
+            <div class="efa-modal" style="max-width: 600px;">
+                <div class="efa-modal-header">
+                    <div class="efa-modal-title">📋 Markdown Content</div>
+                    <button class="efa-modal-close">&times;</button>
                 </div>
-                <div class="vfb-modal-body">
+                <div class="efa-modal-body">
                     <p style="margin-bottom:8px;color:#666;font-size:12px;">
                         Clipboard access denied. Please copy manually:<br>
                         剪贴板访问被拒绝，请手动复制：
                     </p>
-                    <textarea class="vfb-md-textarea" readonly style="width:100%;height:300px;font-family:monospace;font-size:12px;padding:10px;border:1px solid #ddd;border-radius:4px;resize:vertical;">${markdown.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
+                    <textarea class="efa-md-textarea" readonly style="width:100%;height:300px;font-family:monospace;font-size:12px;padding:10px;border:1px solid #ddd;border-radius:4px;resize:vertical;">${markdown.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
                 </div>
-                <div class="vfb-modal-footer">
-                    <button class="vfb-btn vfb-btn-primary vfb-copy-btn">Select All & Copy</button>
-                    <button class="vfb-btn vfb-close-btn">Close</button>
+                <div class="efa-modal-footer">
+                    <button class="efa-btn efa-btn-primary efa-copy-btn">Select All & Copy</button>
+                    <button class="efa-btn efa-close-btn">Close</button>
                 </div>
             </div>
         `;
 
         document.body.appendChild(modalOverlay);
 
-        const textarea = modalOverlay.querySelector('.vfb-md-textarea');
-        const copyBtn = modalOverlay.querySelector('.vfb-copy-btn');
-        const closeBtn = modalOverlay.querySelector('.vfb-close-btn');
-        const closeX = modalOverlay.querySelector('.vfb-modal-close');
+        const textarea = modalOverlay.querySelector('.efa-md-textarea');
+        const copyBtn = modalOverlay.querySelector('.efa-copy-btn');
+        const closeBtn = modalOverlay.querySelector('.efa-close-btn');
+        const closeX = modalOverlay.querySelector('.efa-modal-close');
 
         copyBtn.addEventListener('click', () => {
             textarea.select();
@@ -433,7 +483,7 @@
             return;
         }
 
-        if (VFB.isDevMode) {
+        if (EFA.isDevMode) {
             exitDevMode();
         } else {
             enterDevMode();
@@ -444,19 +494,19 @@
      * Enter developer mode
      */
     function enterDevMode() {
-        VFB.isDevMode = true;
+        EFA.isDevMode = true;
 
         // Update UI
-        const devBtn = document.getElementById('vfb-dev');
+        const devBtn = document.getElementById('efa-dev');
         if (devBtn) {
             devBtn.classList.add('active');
             devBtn.setAttribute('data-tooltip', 'Exit Dev Mode');
         }
 
         // Add dev mode indicator to toolbar
-        const toolbar = VFB.elements.toolbar;
+        const toolbar = EFA.elements.toolbar;
         if (toolbar) {
-            toolbar.classList.add('vfb-dev-mode');
+            toolbar.classList.add('efa-dev-mode');
         }
 
         // Reload annotations (will load all from all sessions)
@@ -469,19 +519,19 @@
      * Exit developer mode
      */
     function exitDevMode() {
-        VFB.isDevMode = false;
+        EFA.isDevMode = false;
 
         // Update UI
-        const devBtn = document.getElementById('vfb-dev');
+        const devBtn = document.getElementById('efa-dev');
         if (devBtn) {
             devBtn.classList.remove('active');
             devBtn.setAttribute('data-tooltip', 'Dev Mode');
         }
 
         // Remove dev mode indicator
-        const toolbar = VFB.elements.toolbar;
+        const toolbar = EFA.elements.toolbar;
         if (toolbar) {
-            toolbar.classList.remove('vfb-dev-mode');
+            toolbar.classList.remove('efa-dev-mode');
         }
 
         // Reload annotations (will load only current session)
@@ -494,7 +544,7 @@
      * Update annotation status (dev mode)
      */
     async function updateAnnotationStatus(ann, newStatus) {
-        if (!VFB.isDevMode) return false;
+        if (!EFA.isDevMode) return false;
 
         const dbId = ann._db_id || ann.id;
         const result = await apiRequest('/annotations/' + dbId, { status: newStatus }, 'PATCH');
@@ -511,7 +561,7 @@
     }
 
     async function addDevResponse(ann, response) {
-        if (!VFB.isDevMode) return false;
+        if (!EFA.isDevMode) return false;
 
         const dbId = ann._db_id || ann.id;
         const result = await apiRequest('/annotations/' + dbId, { developer_response: response }, 'PATCH');
@@ -536,56 +586,56 @@
      */
     function createToolbar() {
         const toolbar = document.createElement('div');
-        toolbar.className = 'vfb-toolbar';
+        toolbar.className = 'efa-toolbar';
         toolbar.innerHTML = `
-            <div class="vfb-toolbar-collapsed" id="vfb-toggle">
+            <div class="efa-toolbar-collapsed" id="efa-toggle">
                 ${Icons.pin}
             </div>
-            <div class="vfb-toolbar-expanded" style="display: none;">
-                <button class="vfb-tool-btn" data-tool="element" data-tooltip="Element">
+            <div class="efa-toolbar-expanded" style="display: none;">
+                <button class="efa-tool-btn" data-tool="element" data-tooltip="Element">
                     ${Icons.element}
                 </button>
-                <button class="vfb-tool-btn" data-tool="text" data-tooltip="Text">
+                <button class="efa-tool-btn" data-tool="text" data-tooltip="Text">
                     ${Icons.text}
                 </button>
-                <button class="vfb-tool-btn" data-tool="screenshot" data-tooltip="Screenshot">
+                <button class="efa-tool-btn" data-tool="screenshot" data-tooltip="Screenshot">
                     ${Icons.screenshot}
                 </button>
-                <div class="vfb-divider"></div>
-                <button class="vfb-tool-btn" id="vfb-list" data-tooltip="List">
+                <div class="efa-divider"></div>
+                <button class="efa-tool-btn" id="efa-list" data-tooltip="List">
                     ${Icons.list}
-                    <span class="vfb-list-count"></span>
+                    <span class="efa-list-count"></span>
                 </button>
-                <button class="vfb-tool-btn" id="vfb-copy" data-tooltip="Copy MD">
+                <button class="efa-tool-btn" id="efa-copy" data-tooltip="Copy MD">
                     ${Icons.copy}
                 </button>
-                ${cfg.isAdmin ? `<button class="vfb-tool-btn" id="vfb-dev" data-tooltip="Dev Mode">
+                ${cfg.isAdmin ? `<button class="efa-tool-btn" id="efa-dev" data-tooltip="Dev Mode">
                     ${Icons.dev}
                 </button>` : ''}
-                <div class="vfb-divider"></div>
-                <button class="vfb-tool-btn vfb-btn-close" id="vfb-collapse" data-tooltip="Close">
+                <div class="efa-divider"></div>
+                <button class="efa-tool-btn efa-btn-close" id="efa-collapse" data-tooltip="Close">
                     ${Icons.close}
                 </button>
             </div>
-            <div class="vfb-list-panel" id="vfb-list-panel" style="display: none;"></div>
+            <div class="efa-list-panel" id="efa-list-panel" style="display: none;"></div>
         `;
 
         document.body.appendChild(toolbar);
-        VFB.elements.toolbar = toolbar;
+        EFA.elements.toolbar = toolbar;
 
         // Bind events
-        toolbar.querySelector('#vfb-toggle').addEventListener('click', expandToolbar);
-        toolbar.querySelector('#vfb-collapse').addEventListener('click', collapseToolbar);
-        toolbar.querySelector('#vfb-copy').addEventListener('click', exportMarkdown);
-        toolbar.querySelector('#vfb-list').addEventListener('click', toggleListPanel);
-        const devBtn = toolbar.querySelector('#vfb-dev');
+        toolbar.querySelector('#efa-toggle').addEventListener('click', expandToolbar);
+        toolbar.querySelector('#efa-collapse').addEventListener('click', collapseToolbar);
+        toolbar.querySelector('#efa-copy').addEventListener('click', exportMarkdown);
+        toolbar.querySelector('#efa-list').addEventListener('click', toggleListPanel);
+        const devBtn = toolbar.querySelector('#efa-dev');
         if (devBtn) devBtn.addEventListener('click', toggleDevMode);
 
         // Tool buttons
-        toolbar.querySelectorAll('.vfb-tool-btn').forEach(btn => {
+        toolbar.querySelectorAll('.efa-tool-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const tool = btn.dataset.tool;
-                if (VFB.currentTool === tool) {
+                if (EFA.currentTool === tool) {
                     deactivateTool();
                 } else {
                     activateTool(tool);
@@ -600,22 +650,22 @@
      * Expand toolbar
      */
     function expandToolbar() {
-        const toolbar = VFB.elements.toolbar;
-        toolbar.querySelector('.vfb-toolbar-collapsed').style.display = 'none';
-        toolbar.querySelector('.vfb-toolbar-expanded').style.display = 'flex';
+        const toolbar = EFA.elements.toolbar;
+        toolbar.querySelector('.efa-toolbar-collapsed').style.display = 'none';
+        toolbar.querySelector('.efa-toolbar-expanded').style.display = 'flex';
     }
 
     /**
      * Collapse toolbar
      */
     function collapseToolbar() {
-        const toolbar = VFB.elements.toolbar;
-        toolbar.querySelector('.vfb-toolbar-expanded').style.display = 'none';
-        toolbar.querySelector('.vfb-toolbar-collapsed').style.display = 'flex';
+        const toolbar = EFA.elements.toolbar;
+        toolbar.querySelector('.efa-toolbar-expanded').style.display = 'none';
+        toolbar.querySelector('.efa-toolbar-collapsed').style.display = 'flex';
         // Close list panel
-        const panel = document.getElementById('vfb-list-panel');
+        const panel = document.getElementById('efa-list-panel');
         if (panel) panel.style.display = 'none';
-        const listBtn = document.getElementById('vfb-list');
+        const listBtn = document.getElementById('efa-list');
         if (listBtn) listBtn.classList.remove('active');
         deactivateTool();
     }
@@ -660,7 +710,7 @@
         renderPageMarkers();
 
         // Also refresh list panel if it's currently open
-        const listPanel = document.getElementById('vfb-list-panel');
+        const listPanel = document.getElementById('efa-list-panel');
         if (listPanel && listPanel.style.display !== 'none') {
             renderListPanel();
         }
@@ -706,13 +756,13 @@
     function renderPageMarkers() {
         // Get existing markers map
         const existingMarkers = {};
-        document.querySelectorAll('.vfb-marker').forEach(m => {
+        document.querySelectorAll('.efa-marker').forEach(m => {
             existingMarkers[m.dataset.id] = m;
         });
 
         const usedIds = new Set();
 
-        VFB.annotations.forEach((ann, index) => {
+        EFA.annotations.forEach((ann, index) => {
             if (ann.type === 'screenshot') {
                 return; // No marker for screenshots
             }
@@ -744,7 +794,7 @@
                 } else {
                     // Create new marker
                     marker = document.createElement('div');
-                    marker.className = 'vfb-marker ' + ann.type;
+                    marker.className = 'efa-marker ' + ann.type;
                     marker.textContent = index + 1;
                     marker.style.position = 'absolute';
                     marker.style.left = left + 'px';
@@ -757,7 +807,7 @@
                     marker.addEventListener('click', (e) => {
                         e.stopPropagation();
                         const annIndex = parseInt(marker.dataset.index, 10);
-                        const annData = VFB.annotations.find(a => a.id === ann.id);
+                        const annData = EFA.annotations.find(a => a.id === ann.id);
                         if (annData) {
                             showAnnotationDetail(annData, annIndex);
                         }
@@ -786,16 +836,16 @@
      * Update badge count on collapsed toolbar
      */
     function updateBadgeCount() {
-        const toggle = document.getElementById('vfb-toggle');
+        const toggle = document.getElementById('efa-toggle');
         if (!toggle) return;
 
-        let badge = toggle.querySelector('.vfb-badge');
-        const count = VFB.annotations.length;
+        let badge = toggle.querySelector('.efa-badge');
+        const count = EFA.annotations.length;
 
         if (count > 0) {
             if (!badge) {
                 badge = document.createElement('span');
-                badge.className = 'vfb-badge';
+                badge.className = 'efa-badge';
                 toggle.appendChild(badge);
             }
             badge.textContent = count;
@@ -813,12 +863,12 @@
      */
     function activateTool(tool) {
         deactivateTool();
-        VFB.currentTool = tool;
-        VFB.isActive = true;
+        EFA.currentTool = tool;
+        EFA.isActive = true;
 
         // Update UI
-        const toolbar = VFB.elements.toolbar;
-        toolbar.querySelectorAll('.vfb-tool-btn').forEach(btn => {
+        const toolbar = EFA.elements.toolbar;
+        toolbar.querySelectorAll('.efa-tool-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.tool === tool);
         });
 
@@ -838,13 +888,13 @@
      * Deactivate current tool
      */
     function deactivateTool() {
-        VFB.currentTool = null;
-        VFB.isActive = false;
+        EFA.currentTool = null;
+        EFA.isActive = false;
 
         // Update UI
-        const toolbar = VFB.elements.toolbar;
+        const toolbar = EFA.elements.toolbar;
         if (toolbar) {
-            toolbar.querySelectorAll('.vfb-tool-btn').forEach(btn => {
+            toolbar.querySelectorAll('.efa-tool-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
         }
@@ -863,31 +913,31 @@
      */
     function createOverlay() {
         const overlay = document.createElement('div');
-        overlay.className = 'vfb-overlay';
-        overlay.id = 'vfb-overlay';
+        overlay.className = 'efa-overlay';
+        overlay.id = 'efa-overlay';
         document.body.appendChild(overlay);
-        VFB.elements.overlay = overlay;
+        EFA.elements.overlay = overlay;
 
         const highlight = document.createElement('div');
-        highlight.className = 'vfb-highlight';
-        highlight.id = 'vfb-highlight';
-        highlight.innerHTML = '<div class="vfb-highlight-label"></div>';
+        highlight.className = 'efa-highlight';
+        highlight.id = 'efa-highlight';
+        highlight.innerHTML = '<div class="efa-highlight-label"></div>';
         highlight.style.display = 'none';
         document.body.appendChild(highlight);
-        VFB.elements.highlight = highlight;
+        EFA.elements.highlight = highlight;
     }
 
     /**
      * Remove overlay
      */
     function removeOverlay() {
-        if (VFB.elements.overlay) {
-            VFB.elements.overlay.remove();
-            VFB.elements.overlay = null;
+        if (EFA.elements.overlay) {
+            EFA.elements.overlay.remove();
+            EFA.elements.overlay = null;
         }
-        if (VFB.elements.highlight) {
-            VFB.elements.highlight.remove();
-            VFB.elements.highlight = null;
+        if (EFA.elements.highlight) {
+            EFA.elements.highlight.remove();
+            EFA.elements.highlight = null;
         }
     }
 
@@ -895,10 +945,10 @@
      * Handle element hover
      */
     function handleElementHover(e) {
-        if (!VFB.isActive || VFB.currentTool !== 'element') return;
+        if (!EFA.isActive || EFA.currentTool !== 'element') return;
 
-        const overlay = VFB.elements.overlay;
-        const highlight = VFB.elements.highlight;
+        const overlay = EFA.elements.overlay;
+        const highlight = EFA.elements.highlight;
         if (!overlay || !highlight) return;
 
         // Get element under cursor (through overlay)
@@ -906,7 +956,7 @@
         const el = document.elementFromPoint(e.clientX, e.clientY);
         overlay.style.pointerEvents = 'auto';
 
-        if (!el || el.closest('.vfb-toolbar') || el.closest('.vfb-highlight')) {
+        if (!el || el.closest('.efa-toolbar') || el.closest('.efa-highlight')) {
             highlight.style.display = 'none';
             return;
         }
@@ -918,7 +968,7 @@
         highlight.style.width = rect.width + 'px';
         highlight.style.height = rect.height + 'px';
 
-        const label = highlight.querySelector('.vfb-highlight-label');
+        const label = highlight.querySelector('.efa-highlight-label');
         label.textContent = el.tagName.toLowerCase() + (el.className ? '.' + el.className.split(' ')[0] : '');
     }
 
@@ -926,9 +976,9 @@
      * Handle element click
      */
     function handleElementClick(e) {
-        if (!VFB.isActive || VFB.currentTool !== 'element') return;
+        if (!EFA.isActive || EFA.currentTool !== 'element') return;
 
-        const overlay = VFB.elements.overlay;
+        const overlay = EFA.elements.overlay;
         if (!overlay) return;
 
         // Get element under cursor
@@ -936,7 +986,7 @@
         const el = document.elementFromPoint(e.clientX, e.clientY);
         overlay.style.pointerEvents = 'auto';
 
-        if (!el || el.closest('.vfb-toolbar') || el.closest('.vfb-modal-overlay')) {
+        if (!el || el.closest('.efa-toolbar') || el.closest('.efa-modal-overlay')) {
             return;
         }
 
@@ -968,8 +1018,8 @@
      * Handle text selection
      */
     function handleTextSelection(e) {
-        if (!VFB.isActive || VFB.currentTool !== 'text') return;
-        if (e.target.closest('.vfb-toolbar') || e.target.closest('.vfb-modal-overlay')) return;
+        if (!EFA.isActive || EFA.currentTool !== 'text') return;
+        if (e.target.closest('.efa-toolbar') || e.target.closest('.efa-modal-overlay')) return;
 
         const selection = window.getSelection();
         const selectedText = selection.toString().trim();
@@ -1021,19 +1071,19 @@
      * Show region selector overlay
      */
     function showRegionSelector() {
-        const toolbar = VFB.elements.toolbar;
+        const toolbar = EFA.elements.toolbar;
         toolbar.style.display = 'none';
 
         const overlay = document.createElement('div');
-        overlay.className = 'vfb-region-overlay';
-        overlay.id = 'vfb-region-overlay';
+        overlay.className = 'efa-region-overlay';
+        overlay.id = 'efa-region-overlay';
         overlay.innerHTML = `
-            <div class="vfb-region-hint">Drag to select capture area / ESC to cancel</div>
-            <div class="vfb-region-box" id="vfb-region-box"></div>
+            <div class="efa-region-hint">Drag to select capture area / ESC to cancel</div>
+            <div class="efa-region-box" id="efa-region-box"></div>
         `;
         document.body.appendChild(overlay);
 
-        const box = document.getElementById('vfb-region-box');
+        const box = document.getElementById('efa-region-box');
         let isDrawing = false;
         let startX = 0, startY = 0;
 
@@ -1097,7 +1147,7 @@
         overlay.addEventListener('mouseup', handleMouseUp);
         document.addEventListener('keydown', handleKeyDown);
 
-        VFB.closeRegionSelector = closeRegionSelector;
+        EFA.closeRegionSelector = closeRegionSelector;
     }
 
     /**
@@ -1106,7 +1156,7 @@
      * Step 2: Crop to selected region
      */
     function captureRegion(rect) {
-        const toolbar = VFB.elements.toolbar;
+        const toolbar = EFA.elements.toolbar;
 
         // Store rect values before closing overlay (viewport coordinates)
         const cropX = rect.left;
@@ -1115,8 +1165,8 @@
         const cropHeight = rect.height;
 
         // Close region selector first
-        if (VFB.closeRegionSelector) {
-            VFB.closeRegionSelector();
+        if (EFA.closeRegionSelector) {
+            EFA.closeRegionSelector();
         }
 
         showToast('Capturing...', 'default');
@@ -1141,12 +1191,12 @@
                 height: window.innerHeight,
                 x: 0,
                 y: 0,
-                // Ignore VFB elements
+                // Ignore EFA elements
                 ignoreElements: (element) => {
                     return element.classList && (
-                        element.classList.contains('vfb-toolbar') ||
-                        element.classList.contains('vfb-toast') ||
-                        element.classList.contains('vfb-marker')
+                        element.classList.contains('efa-toolbar') ||
+                        element.classList.contains('efa-toast') ||
+                        element.classList.contains('efa-marker')
                     );
                 }
             }).then(fullCanvas => {
@@ -1168,7 +1218,7 @@
             }).catch(err => {
                 toolbar.style.display = 'flex';
                 showToast('Screenshot failed', 'error');
-                console.error('VFB Screenshot error:', err);
+                console.error('EFA Screenshot error:', err);
                 deactivateTool();
             });
         }, 150);
@@ -1179,8 +1229,8 @@
      */
     function openScreenshotEditor(canvas) {
         // Call the screenshot module
-        if (typeof VFBScreenshot !== 'undefined') {
-            VFBScreenshot.open(canvas, (imageData) => {
+        if (typeof EFAScreenshot !== 'undefined') {
+            EFAScreenshot.open(canvas, (imageData) => {
                 // Got edited image, show comment modal
                 showCommentModal({
                     type: 'screenshot',
@@ -1215,27 +1265,27 @@
      */
     function showCommentModal(data) {
         const modalOverlay = document.createElement('div');
-        modalOverlay.className = 'vfb-modal-overlay';
+        modalOverlay.className = 'efa-modal-overlay';
         modalOverlay.innerHTML = `
-            <div class="vfb-modal">
-                <div class="vfb-modal-header">
-                    <div class="vfb-modal-title">Add Comment</div>
-                    <button class="vfb-modal-close">&times;</button>
+            <div class="efa-modal">
+                <div class="efa-modal-header">
+                    <div class="efa-modal-title">Add Comment</div>
+                    <button class="efa-modal-close">&times;</button>
                 </div>
-                <div class="vfb-modal-body">
-                    <div class="vfb-modal-info">${data.info || ''}</div>
-                    <textarea class="vfb-textarea" placeholder="Enter your comment..."></textarea>
+                <div class="efa-modal-body">
+                    <div class="efa-modal-info">${data.info || ''}</div>
+                    <textarea class="efa-textarea" placeholder="Enter your comment..."></textarea>
                 </div>
-                <div class="vfb-modal-footer">
-                    <button class="vfb-btn vfb-btn-secondary vfb-modal-cancel">Cancel</button>
-                    <button class="vfb-btn vfb-btn-primary vfb-modal-confirm">Add</button>
+                <div class="efa-modal-footer">
+                    <button class="efa-btn efa-btn-secondary efa-modal-cancel">Cancel</button>
+                    <button class="efa-btn efa-btn-primary efa-modal-confirm">Add</button>
                 </div>
             </div>
         `;
 
         document.body.appendChild(modalOverlay);
 
-        const textarea = modalOverlay.querySelector('.vfb-textarea');
+        const textarea = modalOverlay.querySelector('.efa-textarea');
         textarea.focus();
 
         // Close modal
@@ -1244,14 +1294,14 @@
             deactivateTool();
         };
 
-        modalOverlay.querySelector('.vfb-modal-close').addEventListener('click', closeModal);
-        modalOverlay.querySelector('.vfb-modal-cancel').addEventListener('click', closeModal);
+        modalOverlay.querySelector('.efa-modal-close').addEventListener('click', closeModal);
+        modalOverlay.querySelector('.efa-modal-cancel').addEventListener('click', closeModal);
         modalOverlay.addEventListener('click', (e) => {
             if (e.target === modalOverlay) closeModal();
         });
 
         // Confirm
-        modalOverlay.querySelector('.vfb-modal-confirm').addEventListener('click', async () => {
+        modalOverlay.querySelector('.efa-modal-confirm').addEventListener('click', async () => {
             const comment = textarea.value.trim();
 
             const annotation = {
@@ -1286,7 +1336,7 @@
                 }
             }
 
-            VFB.annotations.push(annotation);
+            EFA.annotations.push(annotation);
             renderAnnotationList();
             renderPageMarkers();
             closeModal();
@@ -1294,9 +1344,9 @@
             // Save individual annotation to DB
             saveAnnotation(annotation, true).then(result => {
                 if (result.success) {
-                    showToast(VFB.i18n.saved || 'Saved', 'success');
+                    showToast(EFA.i18n.saved || 'Saved', 'success');
                 } else {
-                    showToast(VFB.i18n.error || 'Save failed', 'error');
+                    showToast(EFA.i18n.error || 'Save failed', 'error');
                 }
             });
         });
@@ -1313,21 +1363,21 @@
         let infoHtml = '';
         if (ann.type === 'element') {
             infoHtml = `
-                <div class="vfb-detail-type"><strong>Type:</strong> Element</div>
-                <div class="vfb-detail-text"><strong>Text:</strong> "${ann.element_text || ''}"</div>
-                <div class="vfb-detail-selector"><strong>Selector:</strong> <code>${ann.selector || ''}</code></div>
+                <div class="efa-detail-type"><strong>Type:</strong> Element</div>
+                <div class="efa-detail-text"><strong>Text:</strong> "${ann.element_text || ''}"</div>
+                <div class="efa-detail-selector"><strong>Selector:</strong> <code>${ann.selector || ''}</code></div>
             `;
         } else if (ann.type === 'text') {
             infoHtml = `
-                <div class="vfb-detail-type"><strong>Type:</strong> Text Selection</div>
-                <div class="vfb-detail-text"><strong>Selected:</strong> "${ann.selected_text || ''}"</div>
-                <div class="vfb-detail-context"><strong>Context:</strong> ${ann.context || ''}</div>
+                <div class="efa-detail-type"><strong>Type:</strong> Text Selection</div>
+                <div class="efa-detail-text"><strong>Selected:</strong> "${ann.selected_text || ''}"</div>
+                <div class="efa-detail-context"><strong>Context:</strong> ${ann.context || ''}</div>
             `;
         } else if (ann.type === 'screenshot') {
             infoHtml = `
-                <div class="vfb-detail-type"><strong>Type:</strong> Screenshot</div>
-                <div class="vfb-detail-image">
-                    <img src="${ann.screenshot_url || ''}" class="vfb-detail-img-thumb" style="max-width:100%;max-height:200px;border-radius:4px;cursor:zoom-in;" title="Click to enlarge">
+                <div class="efa-detail-type"><strong>Type:</strong> Screenshot</div>
+                <div class="efa-detail-image">
+                    <img src="${ann.screenshot_url || ''}" class="efa-detail-img-thumb" style="max-width:100%;max-height:200px;border-radius:4px;cursor:zoom-in;" title="Click to enlarge">
                 </div>
             `;
         }
@@ -1338,11 +1388,11 @@
         // Status badge
         const status = ann.status || 'pending';
         const statusLabels = { pending: 'Pending', in_progress: 'In Progress', resolved: 'Resolved' };
-        const statusHtml = `<span class="vfb-status-badge vfb-status-${status}">${statusLabels[status] || status}</span>`;
+        const statusHtml = `<span class="efa-status-badge efa-status-${status}">${statusLabels[status] || status}</span>`;
 
         // Developer response (view mode)
         const responseViewHtml = ann.developer_response ? `
-            <div class="vfb-dev-response">
+            <div class="efa-dev-response">
                 <strong><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px;margin-right:4px;"><path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>Developer Response:</strong>
                 <div style="margin-top:6px;padding:8px;background:#e8f5e9;border-radius:4px;border-left:3px solid #28a745;">
                     ${ann.developer_response}
@@ -1352,15 +1402,15 @@
         ` : '';
 
         // Dev mode controls (edit mode)
-        const devControlsHtml = VFB.isDevMode ? `
-            <div class="vfb-dev-controls" style="margin-top:12px;padding-top:12px;border-top:2px solid #667eea;">
+        const devControlsHtml = EFA.isDevMode ? `
+            <div class="efa-dev-controls" style="margin-top:12px;padding-top:12px;border-top:2px solid #667eea;">
                 <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
                     <strong style="font-size:12px;color:#667eea;">${Icons.dev} Dev Controls</strong>
                     ${ann._session_id ? `<small style="color:#999;">Session: ${ann._session_id.substring(0, 8)}...</small>` : ''}
                 </div>
                 <div style="margin-bottom:10px;">
                     <label style="font-size:12px;font-weight:500;">Status:</label>
-                    <select class="vfb-dev-status" style="margin-left:8px;padding:4px 8px;border:1px solid #ddd;border-radius:4px;font-size:12px;">
+                    <select class="efa-dev-status" style="margin-left:8px;padding:4px 8px;border:1px solid #ddd;border-radius:4px;font-size:12px;">
                         <option value="pending" ${status === 'pending' ? 'selected' : ''}>Pending</option>
                         <option value="in_progress" ${status === 'in_progress' ? 'selected' : ''}>In Progress</option>
                         <option value="resolved" ${status === 'resolved' ? 'selected' : ''}>Resolved</option>
@@ -1368,41 +1418,41 @@
                 </div>
                 <div>
                     <label style="font-size:12px;font-weight:500;display:block;margin-bottom:4px;">Response:</label>
-                    <textarea class="vfb-dev-response-input" style="width:100%;min-height:60px;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:12px;resize:vertical;" placeholder="Enter developer response...">${ann.developer_response || ''}</textarea>
-                    <button class="vfb-btn vfb-btn-primary vfb-dev-save-response" style="margin-top:6px;padding:4px 12px;font-size:12px;">Save Response</button>
+                    <textarea class="efa-dev-response-input" style="width:100%;min-height:60px;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:12px;resize:vertical;" placeholder="Enter developer response...">${ann.developer_response || ''}</textarea>
+                    <button class="efa-btn efa-btn-primary efa-dev-save-response" style="margin-top:6px;padding:4px 12px;font-size:12px;">Save Response</button>
                 </div>
             </div>
         ` : responseViewHtml;
 
         const modalOverlay = document.createElement('div');
-        modalOverlay.className = 'vfb-modal-overlay';
+        modalOverlay.className = 'efa-modal-overlay';
         modalOverlay.innerHTML = `
-            <div class="vfb-modal" style="${VFB.isDevMode ? 'width:420px;' : ''}">
-                <div class="vfb-modal-header">
-                    <div class="vfb-modal-title">Annotation #${index + 1} ${statusHtml}</div>
-                    <button class="vfb-modal-close">&times;</button>
+            <div class="efa-modal" style="${EFA.isDevMode ? 'width:420px;' : ''}">
+                <div class="efa-modal-header">
+                    <div class="efa-modal-title">Annotation #${index + 1} ${statusHtml}</div>
+                    <button class="efa-modal-close">&times;</button>
                 </div>
-                <div class="vfb-modal-body">
-                    <div class="vfb-modal-info">
+                <div class="efa-modal-body">
+                    <div class="efa-modal-info">
                         ${infoHtml}
                     </div>
-                    <div class="vfb-detail-comment">
+                    <div class="efa-detail-comment">
                         <strong>User Comment:</strong><br>
                         <div style="margin-top:6px;padding:8px;background:#f8f9fa;border-radius:4px;min-height:40px;">
                             ${ann.comment || '<em style="color:#999;">No comment</em>'}
                         </div>
                     </div>
                     ${devControlsHtml}
-                    <div class="vfb-detail-time" style="margin-top:10px;font-size:11px;color:#999;">
+                    <div class="efa-detail-time" style="margin-top:10px;font-size:11px;color:#999;">
                         Created: ${new Date(ann.timestamp).toLocaleString()}
                     </div>
                 </div>
-                <div class="vfb-modal-footer">
-                    <button class="vfb-btn vfb-btn-danger vfb-detail-delete">
+                <div class="efa-modal-footer">
+                    <button class="efa-btn efa-btn-danger efa-detail-delete">
                         ${Icons.delete} Delete
                     </button>
-                    ${showLocateBtn ? `<button class="vfb-btn vfb-btn-info vfb-detail-locate">${Icons.locate} Locate</button>` : ''}
-                    <button class="vfb-btn vfb-btn-secondary vfb-modal-close-btn">Close</button>
+                    ${showLocateBtn ? `<button class="efa-btn efa-btn-info efa-detail-locate">${Icons.locate} Locate</button>` : ''}
+                    <button class="efa-btn efa-btn-secondary efa-modal-close-btn">Close</button>
                 </div>
             </div>
         `;
@@ -1412,14 +1462,14 @@
         // Close modal
         const closeModal = () => modalOverlay.remove();
 
-        modalOverlay.querySelector('.vfb-modal-close').addEventListener('click', closeModal);
-        modalOverlay.querySelector('.vfb-modal-close-btn').addEventListener('click', closeModal);
+        modalOverlay.querySelector('.efa-modal-close').addEventListener('click', closeModal);
+        modalOverlay.querySelector('.efa-modal-close-btn').addEventListener('click', closeModal);
         modalOverlay.addEventListener('click', (e) => {
             if (e.target === modalOverlay) closeModal();
         });
 
         // Delete button
-        modalOverlay.querySelector('.vfb-detail-delete').addEventListener('click', () => {
+        modalOverlay.querySelector('.efa-detail-delete').addEventListener('click', () => {
             if (confirm('Delete this annotation?')) {
                 deleteAnnotation(ann.id);
                 closeModal();
@@ -1427,7 +1477,7 @@
         });
 
         // Locate button
-        const locateBtn = modalOverlay.querySelector('.vfb-detail-locate');
+        const locateBtn = modalOverlay.querySelector('.efa-detail-locate');
         if (locateBtn) {
             locateBtn.addEventListener('click', () => {
                 closeModal();
@@ -1436,7 +1486,7 @@
         }
 
         // Image zoom (for screenshot type)
-        const thumbImg = modalOverlay.querySelector('.vfb-detail-img-thumb');
+        const thumbImg = modalOverlay.querySelector('.efa-detail-img-thumb');
         if (thumbImg) {
             thumbImg.addEventListener('click', () => {
                 openImageLightbox(thumbImg.src);
@@ -1444,18 +1494,18 @@
         }
 
         // Dev mode controls
-        if (VFB.isDevMode) {
+        if (EFA.isDevMode) {
             // Status change
-            const statusSelect = modalOverlay.querySelector('.vfb-dev-status');
+            const statusSelect = modalOverlay.querySelector('.efa-dev-status');
             if (statusSelect) {
                 statusSelect.addEventListener('change', async () => {
                     const newStatus = statusSelect.value;
                     const success = await updateAnnotationStatus(ann, newStatus);
                     if (success) {
                         // Update status badge in header
-                        const badge = modalOverlay.querySelector('.vfb-status-badge');
+                        const badge = modalOverlay.querySelector('.efa-status-badge');
                         if (badge) {
-                            badge.className = `vfb-status-badge vfb-status-${newStatus}`;
+                            badge.className = `efa-status-badge efa-status-${newStatus}`;
                             badge.textContent = {pending: 'Pending', in_progress: 'In Progress', resolved: 'Resolved'}[newStatus];
                         }
                     }
@@ -1463,10 +1513,10 @@
             }
 
             // Save response
-            const saveResponseBtn = modalOverlay.querySelector('.vfb-dev-save-response');
+            const saveResponseBtn = modalOverlay.querySelector('.efa-dev-save-response');
             if (saveResponseBtn) {
                 saveResponseBtn.addEventListener('click', async () => {
-                    const responseInput = modalOverlay.querySelector('.vfb-dev-response-input');
+                    const responseInput = modalOverlay.querySelector('.efa-dev-response-input');
                     const response = responseInput.value.trim();
                     await addDevResponse(ann, response);
                 });
@@ -1479,12 +1529,12 @@
      */
     function openImageLightbox(src) {
         const lightbox = document.createElement('div');
-        lightbox.className = 'vfb-lightbox';
+        lightbox.className = 'efa-lightbox';
         lightbox.innerHTML = `
-            <div class="vfb-lightbox-content">
-                <img src="${src}" class="vfb-lightbox-img">
-                <button class="vfb-lightbox-close">&times;</button>
-                <div class="vfb-lightbox-hint">Click anywhere or press ESC to close</div>
+            <div class="efa-lightbox-content">
+                <img src="${src}" class="efa-lightbox-img">
+                <button class="efa-lightbox-close">&times;</button>
+                <div class="efa-lightbox-hint">Click anywhere or press ESC to close</div>
             </div>
         `;
         document.body.appendChild(lightbox);
@@ -1492,7 +1542,7 @@
         const closeLightbox = () => lightbox.remove();
 
         lightbox.addEventListener('click', closeLightbox);
-        lightbox.querySelector('.vfb-lightbox-close').addEventListener('click', closeLightbox);
+        lightbox.querySelector('.efa-lightbox-close').addEventListener('click', closeLightbox);
 
         const handleKeyDown = (e) => {
             if (e.key === 'Escape') {
@@ -1538,11 +1588,11 @@
 
             // Show highlight effect after scroll completes
             setTimeout(() => {
-                targetEl.classList.add('vfb-locate-highlight');
+                targetEl.classList.add('efa-locate-highlight');
 
                 // Remove highlight after 2 seconds
                 setTimeout(() => {
-                    targetEl.classList.remove('vfb-locate-highlight');
+                    targetEl.classList.remove('efa-locate-highlight');
                 }, 2000);
 
                 renderPageMarkers();
@@ -1560,12 +1610,12 @@
 
         // Create pulsing rings marker
         const marker = document.createElement('div');
-        marker.id = 'vfb-locate-marker';
+        marker.id = 'efa-locate-marker';
         marker.innerHTML = `
-            <div class="vfb-ring vfb-ring-1"></div>
-            <div class="vfb-ring vfb-ring-2"></div>
-            <div class="vfb-ring vfb-ring-3"></div>
-            <div class="vfb-center-dot"></div>
+            <div class="efa-ring efa-ring-1"></div>
+            <div class="efa-ring efa-ring-2"></div>
+            <div class="efa-ring efa-ring-3"></div>
+            <div class="efa-center-dot"></div>
         `;
 
         // Inline styles for reliability
@@ -1591,19 +1641,19 @@
             transform: translate(-50%, -50%);
         `;
 
-        marker.querySelector('.vfb-ring-1').style.cssText = ringBase + `
+        marker.querySelector('.efa-ring-1').style.cssText = ringBase + `
             width: 20px; height: 20px;
-            animation: vfbRingPulse 1.2s ease-out infinite;
+            animation: efaRingPulse 1.2s ease-out infinite;
         `;
-        marker.querySelector('.vfb-ring-2').style.cssText = ringBase + `
+        marker.querySelector('.efa-ring-2').style.cssText = ringBase + `
             width: 35px; height: 35px;
-            animation: vfbRingPulse 1.2s ease-out infinite 0.3s;
+            animation: efaRingPulse 1.2s ease-out infinite 0.3s;
         `;
-        marker.querySelector('.vfb-ring-3').style.cssText = ringBase + `
+        marker.querySelector('.efa-ring-3').style.cssText = ringBase + `
             width: 50px; height: 50px;
-            animation: vfbRingPulse 1.2s ease-out infinite 0.6s;
+            animation: efaRingPulse 1.2s ease-out infinite 0.6s;
         `;
-        marker.querySelector('.vfb-center-dot').style.cssText = `
+        marker.querySelector('.efa-center-dot').style.cssText = `
             position: absolute;
             width: 10px; height: 10px;
             background: #ff6b35;
@@ -1613,11 +1663,11 @@
         `;
 
         // Add keyframes animation if not exists
-        if (!document.getElementById('vfb-locate-styles')) {
+        if (!document.getElementById('efa-locate-styles')) {
             const style = document.createElement('style');
-            style.id = 'vfb-locate-styles';
+            style.id = 'efa-locate-styles';
             style.textContent = `
-                @keyframes vfbRingPulse {
+                @keyframes efaRingPulse {
                     0% { transform: translate(-50%, -50%) scale(0.8); opacity: 1; }
                     100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
                 }
@@ -1632,7 +1682,7 @@
      * Remove the locate marker
      */
     function removeLocateMarker() {
-        const marker = document.getElementById('vfb-locate-marker');
+        const marker = document.getElementById('efa-locate-marker');
         if (marker) marker.remove();
     }
 
@@ -1675,8 +1725,8 @@
      * Toggle list panel
      */
     function toggleListPanel() {
-        const panel = document.getElementById('vfb-list-panel');
-        const listBtn = document.getElementById('vfb-list');
+        const panel = document.getElementById('efa-list-panel');
+        const listBtn = document.getElementById('efa-list');
 
         if (panel.style.display === 'none') {
             renderListPanel();
@@ -1692,16 +1742,16 @@
      * Render list panel content
      */
     function renderListPanel() {
-        const panel = document.getElementById('vfb-list-panel');
+        const panel = document.getElementById('efa-list-panel');
         if (!panel) return;
 
-        if (VFB.annotations.length === 0) {
-            panel.innerHTML = '<div class="vfb-list-empty">No annotations yet</div>';
+        if (EFA.annotations.length === 0) {
+            panel.innerHTML = '<div class="efa-list-empty">No annotations yet</div>';
             return;
         }
 
-        let html = '<div class="vfb-list-items">';
-        VFB.annotations.forEach((ann, index) => {
+        let html = '<div class="efa-list-items">';
+        EFA.annotations.forEach((ann, index) => {
             let typeIcon = Icons.element;
             let summary = '';
 
@@ -1722,14 +1772,14 @@
             }
 
             // Resolved indicator
-            const resolvedMark = ann.status === 'resolved' ? '<span class="vfb-list-item-resolved" title="Resolved">✓</span>' : '';
+            const resolvedMark = ann.status === 'resolved' ? '<span class="efa-list-item-resolved" title="Resolved">✓</span>' : '';
 
             html += `
-                <div class="vfb-list-item ${ann.status === 'resolved' ? 'vfb-list-item-is-resolved' : ''}" data-id="${ann.id}" data-index="${index}">
-                    <span class="vfb-list-item-num">${index + 1}</span>
-                    <span class="vfb-list-item-icon">${typeIcon}</span>
-                    <span class="vfb-list-item-summary">${summary}</span>
-                    <span class="vfb-list-item-comment">${ann.comment ? '💬' : ''}</span>
+                <div class="efa-list-item ${ann.status === 'resolved' ? 'efa-list-item-is-resolved' : ''}" data-id="${ann.id}" data-index="${index}">
+                    <span class="efa-list-item-num">${index + 1}</span>
+                    <span class="efa-list-item-icon">${typeIcon}</span>
+                    <span class="efa-list-item-summary">${summary}</span>
+                    <span class="efa-list-item-comment">${ann.comment ? '💬' : ''}</span>
                     ${resolvedMark}
                 </div>
             `;
@@ -1739,11 +1789,11 @@
         panel.innerHTML = html;
 
         // Bind click events to list items
-        panel.querySelectorAll('.vfb-list-item').forEach(item => {
+        panel.querySelectorAll('.efa-list-item').forEach(item => {
             item.addEventListener('click', () => {
                 const id = item.dataset.id;
                 const index = parseInt(item.dataset.index, 10);
-                const ann = VFB.annotations.find(a => a.id === id);
+                const ann = EFA.annotations.find(a => a.id === id);
                 if (ann) {
                     // Screenshot: open dialog directly without locate
                     if (ann.type === 'screenshot') {
@@ -1770,9 +1820,9 @@
         hideLocateLoading();
 
         const loader = document.createElement('div');
-        loader.id = 'vfb-locate-loading';
+        loader.id = 'efa-locate-loading';
         loader.innerHTML = `
-            <div class="vfb-locate-loading-spinner"></div>
+            <div class="efa-locate-loading-spinner"></div>
             <span>Locating...</span>
         `;
         document.body.appendChild(loader);
@@ -1782,7 +1832,7 @@
      * Hide locate loading indicator
      */
     function hideLocateLoading() {
-        const loader = document.getElementById('vfb-locate-loading');
+        const loader = document.getElementById('efa-locate-loading');
         if (loader) loader.remove();
     }
 
@@ -1790,10 +1840,10 @@
      * Update list button count
      */
     function updateListCount() {
-        const countEl = document.querySelector('.vfb-list-count');
+        const countEl = document.querySelector('.efa-list-count');
         if (!countEl) return;
 
-        const count = VFB.annotations.length;
+        const count = EFA.annotations.length;
         if (count > 0) {
             countEl.textContent = count;
             countEl.style.display = 'flex';
@@ -1810,8 +1860,8 @@
         // Default shortcut: Ctrl+Shift+F
         if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'f') {
             e.preventDefault();
-            if (VFB.elements.toolbar) {
-                const collapsed = VFB.elements.toolbar.querySelector('.vfb-toolbar-collapsed');
+            if (EFA.elements.toolbar) {
+                const collapsed = EFA.elements.toolbar.querySelector('.efa-toolbar-collapsed');
                 if (collapsed.style.display !== 'none') {
                     expandToolbar();
                 } else {
@@ -1821,7 +1871,7 @@
         }
 
         // Escape to deactivate tool
-        if (e.key === 'Escape' && VFB.isActive) {
+        if (e.key === 'Escape' && EFA.isActive) {
             deactivateTool();
         }
     }
@@ -1832,15 +1882,15 @@
 
     function init() {
         // Check if already initialized
-        if (document.querySelector('.vfb-toolbar')) return;
+        if (document.querySelector('.efa-toolbar')) return;
 
         createToolbar();
 
         // Auto-enter dev mode for admins
-        if (cfg.isAdmin && VFB.isDevMode) {
-            const toolbar = VFB.elements.toolbar;
-            if (toolbar) toolbar.classList.add('vfb-dev-mode');
-            const devBtnInit = document.getElementById('vfb-dev');
+        if (cfg.isAdmin && EFA.isDevMode) {
+            const toolbar = EFA.elements.toolbar;
+            if (toolbar) toolbar.classList.add('efa-dev-mode');
+            const devBtnInit = document.getElementById('efa-dev');
             if (devBtnInit) {
                 devBtnInit.classList.add('active');
                 devBtnInit.setAttribute('data-tooltip', 'Exit Dev Mode');
@@ -1872,6 +1922,6 @@
     }
 
     // Expose to global
-    window.VFB = VFB;
+    window.EFA = EFA;
 
 })();

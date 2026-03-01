@@ -3,9 +3,9 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-class VFB_Session {
+class EFA_Session {
 
-    const COOKIE_NAME = 'vfb_session';
+    const COOKIE_NAME = 'efa_session';
 
     /**
      * Initialize session cookie on the init hook.
@@ -35,12 +35,12 @@ class VFB_Session {
         global $wpdb;
 
         $token = wp_generate_uuid4();
-        $expiry_hours = (int) get_option( 'vfb_session_expiry_hours', 72 );
+        $expiry_hours = (int) get_option( 'efa_session_expiry_hours', 72 );
         $expires_at = gmdate( 'Y-m-d H:i:s', time() + $expiry_hours * HOUR_IN_SECONDS );
         $now = current_time( 'mysql', true );
 
         $wpdb->insert(
-            $wpdb->prefix . 'vfb_sessions',
+            $wpdb->prefix . 'efa_sessions',
             array(
                 'session_token' => $token,
                 'user_id'       => get_current_user_id() ?: null,
@@ -89,7 +89,7 @@ class VFB_Session {
 
         return $wpdb->get_row(
             $wpdb->prepare(
-                "SELECT * FROM {$wpdb->prefix}vfb_sessions WHERE session_token = %s AND expires_at > %s",
+                "SELECT * FROM {$wpdb->prefix}efa_sessions WHERE session_token = %s AND expires_at > %s",
                 $token,
                 current_time( 'mysql', true )
             )
@@ -115,7 +115,7 @@ class VFB_Session {
         global $wpdb;
 
         $wpdb->update(
-            $wpdb->prefix . 'vfb_sessions',
+            $wpdb->prefix . 'efa_sessions',
             array( 'last_active' => current_time( 'mysql', true ) ),
             array( 'id' => $session_id ),
             array( '%s' ),
@@ -131,8 +131,8 @@ class VFB_Session {
         global $wpdb;
 
         $now = current_time( 'mysql', true );
-        $sessions_table = $wpdb->prefix . 'vfb_sessions';
-        $annotations_table = $wpdb->prefix . 'vfb_annotations';
+        $sessions_table = $wpdb->prefix . 'efa_sessions';
+        $annotations_table = $wpdb->prefix . 'efa_annotations';
 
         // Get expired sessions
         $expired = $wpdb->get_results(
@@ -147,11 +147,11 @@ class VFB_Session {
         }
 
         $upload_dir = wp_upload_dir();
-        $vfb_base = $upload_dir['basedir'] . '/eye-for-ai';
+        $efa_base = $upload_dir['basedir'] . '/eye-for-ai';
 
         foreach ( $expired as $session ) {
             // Delete screenshots directory
-            $session_dir = $vfb_base . '/' . $session->session_token;
+            $session_dir = $efa_base . '/' . $session->session_token;
             if ( is_dir( $session_dir ) ) {
                 self::delete_directory( $session_dir );
             }

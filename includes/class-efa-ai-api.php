@@ -3,7 +3,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-class VFB_AI_API {
+class EFA_AI_API {
 
     const NAMESPACE = 'eye-for-ai/v1';
 
@@ -42,18 +42,24 @@ class VFB_AI_API {
      */
     public function check_ai_auth( $request ) {
         // Check if AI API is enabled
-        if ( get_option( 'vfb_ai_enabled', '0' ) !== '1' ) {
+        if ( get_option( 'efa_ai_enabled', '0' ) !== '1' ) {
             return new WP_Error(
                 'ai_disabled',
-                __( 'AI API is not enabled. Enable it in Settings > Visual Feedback.', 'eye-for-ai' ),
+                __( 'AI API is not enabled. Enable it in Settings > Eye for AI.', 'eye-for-ai' ),
                 array( 'status' => 403 )
             );
         }
 
-        // Method 1: Custom API Key via X-VFB-API-Key header
-        $api_key = $request->get_header( 'X-VFB-API-Key' );
+        // Method 1: Custom API Key via X-EFA-API-Key header
+        $api_key = $request->get_header( 'X-EFA-API-Key' );
+
+        // Also accept legacy X-VFB-API-Key header for backwards compatibility
+        if ( ! $api_key ) {
+            $api_key = $request->get_header( 'X-VFB-API-Key' );
+        }
+
         if ( $api_key ) {
-            $stored_key = get_option( 'vfb_ai_api_key', '' );
+            $stored_key = get_option( 'efa_ai_api_key', '' );
             if ( ! empty( $stored_key ) && hash_equals( $stored_key, $api_key ) ) {
                 return true;
             }
@@ -63,13 +69,13 @@ class VFB_AI_API {
         // Method 2: WordPress Application Password (Basic Auth)
         // WP automatically authenticates via application passwords.
         // If the user is authenticated and has the right capability, allow.
-        if ( is_user_logged_in() && current_user_can( get_option( 'vfb_capability', 'manage_options' ) ) ) {
+        if ( is_user_logged_in() && current_user_can( get_option( 'efa_capability', 'manage_options' ) ) ) {
             return true;
         }
 
         return new WP_Error(
             'auth_required',
-            __( 'Authentication required. Use X-VFB-API-Key header or WordPress Application Password.', 'eye-for-ai' ),
+            __( 'Authentication required. Use X-EFA-API-Key header or WordPress Application Password.', 'eye-for-ai' ),
             array( 'status' => 401 )
         );
     }
@@ -89,8 +95,8 @@ class VFB_AI_API {
             $status = 'pending';
         }
 
-        $annotations_table = $wpdb->prefix . 'vfb_annotations';
-        $sessions_table    = $wpdb->prefix . 'vfb_sessions';
+        $annotations_table = $wpdb->prefix . 'efa_annotations';
+        $sessions_table    = $wpdb->prefix . 'efa_sessions';
 
         $results = $wpdb->get_results(
             $wpdb->prepare(
@@ -174,7 +180,7 @@ class VFB_AI_API {
             return new WP_Error( 'too_many', __( 'Maximum 100 updates per batch.', 'eye-for-ai' ), array( 'status' => 400 ) );
         }
 
-        $table   = $wpdb->prefix . 'vfb_annotations';
+        $table   = $wpdb->prefix . 'efa_annotations';
         $allowed = array( 'pending', 'in_progress', 'resolved', 'wontfix' );
         $results = array();
 

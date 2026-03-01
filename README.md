@@ -6,7 +6,7 @@ Visitors and team members annotate page elements, highlight text, and capture ma
 
 **Author:** Jonathan Wang
 **License:** GPLv2+
-**Version:** 1.1.0
+**Version:** 1.2.0
 **Requires:** WordPress 5.8+ / PHP 7.4+
 
 ---
@@ -51,7 +51,7 @@ wp plugin activate eye-for-ai
 
 1. **Settings → Eye for AI** — Enable the toolbar, set session expiry, configure max screenshot size
 2. **Enable AI API** — Check the box, click "Generate API Key"
-3. **Save your API key** — Pass it via `X-VFB-API-Key` header in API calls
+3. **Save your API key** — Pass it via `X-EFA-API-Key` header in API calls
 
 ### Use
 
@@ -78,7 +78,7 @@ Visit any frontend page. The feedback toolbar appears at bottom-right:
 
 | Method | Header | Notes |
 |--------|--------|-------|
-| API Key | `X-VFB-API-Key: <your-key>` | Generated in Settings → Eye for AI |
+| API Key | `X-EFA-API-Key: <your-key>` | Generated in Settings → Eye for AI |
 | WP Application Password | `Authorization: Basic base64(user:app-password)` | Any user with `manage_options` |
 
 ### GET /ai/pending
@@ -92,7 +92,7 @@ Retrieve pending annotations with full context.
 **Example:**
 
 ```bash
-curl -H "X-VFB-API-Key: YOUR_KEY" \
+curl -H "X-EFA-API-Key: YOUR_KEY" \
   "https://yoursite.com/wp-json/eye-for-ai/v1/ai/pending?status=pending&limit=20"
 ```
 
@@ -194,7 +194,7 @@ Bulk update annotation status and developer response (max 100 per request).
 
 ```bash
 curl -X PATCH \
-  -H "X-VFB-API-Key: YOUR_KEY" \
+  -H "X-EFA-API-Key: YOUR_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "updates": [
@@ -282,7 +282,7 @@ User draws a region, captures it via html2canvas, then annotates with:
 
 Two custom tables are created on activation:
 
-### wp_vfb_sessions
+### wp_efa_sessions
 
 | Column | Type | Description |
 |--------|------|-------------|
@@ -295,7 +295,7 @@ Two custom tables are created on activation:
 | last_active | datetime | Last API call |
 | expires_at | datetime | Auto-cleanup threshold |
 
-### wp_vfb_annotations
+### wp_efa_annotations
 
 | Column | Type | Description |
 |--------|------|-------------|
@@ -325,7 +325,7 @@ Two custom tables are created on activation:
 
 ```bash
 # Poll for new feedback every hour
-PENDING=$(curl -s -H "X-VFB-API-Key: $EFA_KEY" \
+PENDING=$(curl -s -H "X-EFA-API-Key: $EFA_KEY" \
   "https://yoursite.com/wp-json/eye-for-ai/v1/ai/pending")
 
 # Parse and generate fix suggestions
@@ -340,7 +340,7 @@ import requests
 import json
 
 API = "https://yoursite.com/wp-json/eye-for-ai/v1"
-HEADERS = {"X-VFB-API-Key": "your-api-key"}
+HEADERS = {"X-EFA-API-Key": "your-api-key"}
 
 # Fetch pending
 resp = requests.get(f"{API}/ai/pending", headers=HEADERS)
@@ -372,22 +372,22 @@ eye-for-ai/
 ├── uninstall.php                # Clean removal (drop tables, delete uploads/options)
 ├── readme.txt                   # WordPress.org listing
 ├── includes/
-│   ├── class-vfb-activator.php  # DB table creation via dbDelta()
-│   ├── class-vfb-deactivator.php# Clear cron on deactivation
-│   ├── class-vfb-session.php    # Cookie + DB session management
-│   ├── class-vfb-rest-api.php   # Frontend REST endpoints (7 routes)
-│   ├── class-vfb-ai-api.php     # AI REST endpoints (/ai/pending, /ai/batch)
-│   ├── class-vfb-admin.php      # WP admin pages (dashboard + settings)
-│   ├── class-vfb-frontend.php   # Asset enqueue + config injection
-│   └── class-vfb-export.php     # Markdown report generator
+│   ├── class-efa-activator.php   # DB table creation via dbDelta()
+│   ├── class-efa-deactivator.php # Clear cron on deactivation
+│   ├── class-efa-session.php     # Cookie + DB session management
+│   ├── class-efa-rest-api.php    # Frontend REST endpoints (7 routes)
+│   ├── class-efa-ai-api.php      # AI REST endpoints (/ai/pending, /ai/batch)
+│   ├── class-efa-admin.php       # WP admin pages (dashboard + settings)
+│   ├── class-efa-frontend.php    # Asset enqueue + config injection
+│   └── class-efa-export.php      # Markdown report generator
 ├── assets/
 │   ├── js/
-│   │   ├── vfb.js               # Main frontend (toolbar, annotations, API calls)
-│   │   ├── vfb-screenshot.js    # Screenshot editor (canvas drawing tools)
-│   │   └── vfb-admin.js         # Admin panel interactions
+│   │   ├── efa.js               # Main frontend (toolbar, annotations, API calls)
+│   │   ├── efa-screenshot.js    # Screenshot editor (canvas drawing tools)
+│   │   └── efa-admin.js         # Admin panel interactions
 │   ├── css/
-│   │   ├── vfb.css              # Frontend styles (toolbar, modal, markers)
-│   │   └── vfb-admin.css        # Admin panel styles
+│   │   ├── efa.css              # Frontend styles (toolbar, modal, markers)
+│   │   └── efa-admin.css        # Admin panel styles
 │   └── vendor/
 │       └── html2canvas.min.js   # Bundled v1.4.1 (no CDN dependency)
 └── languages/
@@ -402,15 +402,15 @@ Eye for AI exists in two editions for different environments:
 
 | | WordPress Edition | Standalone Edition |
 |---|---|---|
-| **Location** | `eye-for-ai/` plugin | `euro/assets/vfb/` |
+| **Location** | `eye-for-ai/` plugin | `euro/assets/efa/` |
 | **Storage** | WordPress database | File system (`/data/`) |
 | **API** | WP REST API (`/wp-json/eye-for-ai/v1/`) | Plain PHP (`/api/feedback.php`) |
 | **Auth** | WP nonce + capabilities | Session-based / password |
 | **AI API** | Built-in (`/ai/pending`, `/ai/batch`) | Not available |
-| **Position tracking** | Full URL + viewport + scroll + rect | Page path only |
+| **Position tracking** | Full URL + viewport + scroll + rect | Full URL + viewport + scroll + rect |
 | **Use case** | WordPress sites | Any PHP site (ScriptCase, Laravel, etc.) |
 
-Both editions share the same frontend JS core (`vfb.js`, `vfb-screenshot.js`, `vfb.css`).
+Both editions share the same unified frontend core (`efa.js`, `efa-screenshot.js`, `efa.css`) with dual `apiMode` support (`rest` for WordPress, `standalone` for plain PHP).
 
 ---
 

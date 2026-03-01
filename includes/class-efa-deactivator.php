@@ -3,12 +3,12 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-class VFB_Deactivator {
+class EFA_Deactivator {
 
     /**
      * Run on plugin deactivation.
      */
     public static function deactivate() {
-        wp_clear_scheduled_hook( 'vfb_cleanup_sessions' );
+        wp_clear_scheduled_hook( 'efa_cleanup_sessions' );
     }
 }

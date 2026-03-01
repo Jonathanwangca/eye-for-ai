@@ -3,7 +3,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-class VFB_REST_API {
+class EFA_REST_API {
 
     const NAMESPACE = 'eye-for-ai/v1';
 
@@ -119,7 +119,7 @@ class VFB_REST_API {
             return $nonce_check;
         }
 
-        if ( ! current_user_can( get_option( 'vfb_capability', 'manage_options' ) ) ) {
+        if ( ! current_user_can( get_option( 'efa_capability', 'manage_options' ) ) ) {
             return new WP_Error( 'rest_forbidden', __( 'Admin access required.', 'eye-for-ai' ), array( 'status' => 403 ) );
         }
 
@@ -134,10 +134,10 @@ class VFB_REST_API {
      * POST /session
      */
     public function create_session( $request ) {
-        $session = VFB_Session::get_current();
+        $session = EFA_Session::get_current();
 
         if ( ! $session ) {
-            $session = VFB_Session::create();
+            $session = EFA_Session::create();
         }
 
         if ( ! $session ) {
@@ -160,10 +160,10 @@ class VFB_REST_API {
         $page_url = $request->get_param( 'page_url' );
         $all = $request->get_param( 'all' ) === '1';
 
-        $annotations_table = $wpdb->prefix . 'vfb_annotations';
-        $sessions_table = $wpdb->prefix . 'vfb_sessions';
+        $annotations_table = $wpdb->prefix . 'efa_annotations';
+        $sessions_table = $wpdb->prefix . 'efa_sessions';
 
-        if ( $all && current_user_can( get_option( 'vfb_capability', 'manage_options' ) ) ) {
+        if ( $all && current_user_can( get_option( 'efa_capability', 'manage_options' ) ) ) {
             // Admin: load all sessions' annotations for this page
             $results = $wpdb->get_results(
                 $wpdb->prepare(
@@ -177,7 +177,7 @@ class VFB_REST_API {
             );
         } else {
             // Regular user: own session only
-            $session = VFB_Session::get_current();
+            $session = EFA_Session::get_current();
 
             if ( ! $session ) {
                 return rest_ensure_response( array(
@@ -210,7 +210,7 @@ class VFB_REST_API {
     public function save_annotation( $request ) {
         global $wpdb;
 
-        $session = VFB_Session::get_current();
+        $session = EFA_Session::get_current();
 
         if ( ! $session ) {
             return new WP_Error( 'no_session', __( 'No active session.', 'eye-for-ai' ), array( 'status' => 400 ) );
@@ -239,7 +239,7 @@ class VFB_REST_API {
             return new WP_Error( 'invalid_type', __( 'Invalid annotation type.', 'eye-for-ai' ), array( 'status' => 400 ) );
         }
 
-        $table = $wpdb->prefix . 'vfb_annotations';
+        $table = $wpdb->prefix . 'efa_annotations';
         $now   = current_time( 'mysql', true );
 
         // Upsert: check if annotation_key exists for this session
@@ -297,7 +297,7 @@ class VFB_REST_API {
         global $wpdb;
 
         $id = (int) $request->get_param( 'id' );
-        $table = $wpdb->prefix . 'vfb_annotations';
+        $table = $wpdb->prefix . 'efa_annotations';
 
         $annotation = $wpdb->get_row(
             $wpdb->prepare( "SELECT * FROM {$table} WHERE id = %d", $id )
@@ -308,8 +308,8 @@ class VFB_REST_API {
         }
 
         // Owner or admin can delete
-        $session = VFB_Session::get_current();
-        $is_admin = current_user_can( get_option( 'vfb_capability', 'manage_options' ) );
+        $session = EFA_Session::get_current();
+        $is_admin = current_user_can( get_option( 'efa_capability', 'manage_options' ) );
 
         if ( ! $is_admin && ( ! $session || (int) $annotation->session_id !== (int) $session->id ) ) {
             return new WP_Error( 'forbidden', __( 'You can only delete your own annotations.', 'eye-for-ai' ), array( 'status' => 403 ) );
@@ -339,7 +339,7 @@ class VFB_REST_API {
         global $wpdb;
 
         $id = (int) $request->get_param( 'id' );
-        $table = $wpdb->prefix . 'vfb_annotations';
+        $table = $wpdb->prefix . 'efa_annotations';
 
         $annotation = $wpdb->get_row(
             $wpdb->prepare( "SELECT * FROM {$table} WHERE id = %d", $id )
@@ -379,7 +379,7 @@ class VFB_REST_API {
      * POST /screenshots
      */
     public function upload_screenshot( $request ) {
-        $session = VFB_Session::get_current();
+        $session = EFA_Session::get_current();
 
         if ( ! $session ) {
             return new WP_Error( 'no_session', __( 'No active session.', 'eye-for-ai' ), array( 'status' => 400 ) );
@@ -406,7 +406,7 @@ class VFB_REST_API {
         }
 
         // Check file size
-        $max_mb = (int) get_option( 'vfb_screenshot_max_size', 2 );
+        $max_mb = (int) get_option( 'efa_screenshot_max_size', 2 );
         if ( strlen( $raw ) > $max_mb * 1024 * 1024 ) {
             return new WP_Error( 'too_large', sprintf( __( 'Image exceeds %dMB limit.', 'eye-for-ai' ), $max_mb ), array( 'status' => 413 ) );
         }
@@ -446,7 +446,7 @@ class VFB_REST_API {
         global $wpdb;
 
         $page_url = $request->get_param( 'page_url' );
-        $session  = VFB_Session::get_current();
+        $session  = EFA_Session::get_current();
 
         if ( ! $session ) {
             return new WP_Error( 'no_session', __( 'No active session.', 'eye-for-ai' ), array( 'status' => 400 ) );
@@ -454,13 +454,13 @@ class VFB_REST_API {
 
         $annotations = $wpdb->get_results(
             $wpdb->prepare(
-                "SELECT * FROM {$wpdb->prefix}vfb_annotations WHERE session_id = %d AND page_url = %s ORDER BY created_at ASC",
+                "SELECT * FROM {$wpdb->prefix}efa_annotations WHERE session_id = %d AND page_url = %s ORDER BY created_at ASC",
                 $session->id,
                 $page_url
             )
         );
 
-        $md = VFB_Export::generate( $annotations, $page_url );
+        $md = EFA_Export::generate( $annotations, $page_url );
 
         return rest_ensure_response( array(
             'success'  => true,

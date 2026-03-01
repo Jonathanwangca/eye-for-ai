@@ -3,7 +3,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-class VFB_Export {
+class EFA_Export {
 
     /**
      * Generate Markdown report from annotations.
@@ -18,7 +18,7 @@ class VFB_Export {
             $page_title = $annotations[0]->page_title ?? '';
         }
 
-        $md  = "# Visual Feedback Report\n\n";
+        $md  = "# Eye for AI Feedback Report\n\n";
         $md .= '**Page**: ' . ( $page_title ?: $page_url ) . "\n";
         $md .= '**URL**: ' . $page_url . "\n";
         $md .= '**Date**: ' . current_time( 'Y-m-d H:i' ) . "\n";

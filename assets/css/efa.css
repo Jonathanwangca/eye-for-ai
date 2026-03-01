@@ -1,5 +1,5 @@
 /**
- * Visual Feedback Tool Styles
+ * Eye for AI Tool Styles
  * 视觉反馈工具样式
  * Version: 1.4
  */
@@ -7,7 +7,7 @@
 /* ========================================
    Toolbar - 工具栏
    ======================================== */
-.vfb-toolbar {
+.efa-toolbar {
     position: fixed;
     bottom: 20px;
     right: 20px;
@@ -19,7 +19,7 @@
     align-items: center;
 }
 
-.vfb-toolbar-collapsed {
+.efa-toolbar-collapsed {
     position: relative;
     width: 40px;
     height: 40px;
@@ -33,19 +33,19 @@
     transition: all 0.3s ease;
 }
 
-.vfb-toolbar-collapsed:hover {
+.efa-toolbar-collapsed:hover {
     transform: scale(1.1);
     box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
 }
 
-.vfb-toolbar-collapsed svg {
+.efa-toolbar-collapsed svg {
     width: 20px;
     height: 20px;
     fill: white;
 }
 
 /* Badge count */
-.vfb-badge {
+.efa-badge {
     position: absolute;
     top: -4px;
     right: -4px;
@@ -63,7 +63,7 @@
     border: 2px solid white;
 }
 
-.vfb-toolbar-expanded {
+.efa-toolbar-expanded {
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -72,10 +72,10 @@
     border-radius: 24px;
     padding: 6px 10px;
     box-shadow: 0 4px 20px rgba(255, 107, 53, 0.4);
-    animation: vfb-slideLeft 0.3s ease;
+    animation: efa-slideLeft 0.3s ease;
 }
 
-@keyframes vfb-slideLeft {
+@keyframes efa-slideLeft {
     from {
         opacity: 0;
         transform: translateX(20px);
@@ -87,7 +87,7 @@
 }
 
 /* Divider */
-.vfb-divider {
+.efa-divider {
     width: 1px;
     height: 24px;
     background: rgba(255, 255, 255, 0.4);
@@ -95,7 +95,7 @@
 }
 
 /* Tool buttons */
-.vfb-tool-btn {
+.efa-tool-btn {
     width: 32px;
     height: 32px;
     padding: 0;
@@ -111,36 +111,36 @@
     position: relative;
 }
 
-.vfb-tool-btn:hover {
+.efa-tool-btn:hover {
     background: rgba(255, 255, 255, 0.25);
     color: white;
 }
 
-.vfb-tool-btn.active {
+.efa-tool-btn.active {
     background: rgba(255, 255, 255, 0.35);
     color: white;
     box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
 }
 
-.vfb-tool-btn svg {
+.efa-tool-btn svg {
     width: 18px;
     height: 18px;
     fill: currentColor;
 }
 
 /* Special button styles */
-.vfb-btn-save:hover {
+.efa-btn-save:hover {
     background: rgba(40, 167, 69, 0.8);
     color: white;
 }
 
-.vfb-btn-close:hover {
+.efa-btn-close:hover {
     background: rgba(220, 53, 69, 0.8);
     color: white;
 }
 
 /* Tooltip for tool buttons */
-.vfb-tool-btn::after {
+.efa-tool-btn::after {
     content: attr(data-tooltip);
     position: absolute;
     bottom: 100%;
@@ -159,7 +159,7 @@
     pointer-events: none;
 }
 
-.vfb-tool-btn:hover::after {
+.efa-tool-btn:hover::after {
     opacity: 1;
     visibility: visible;
 }
@@ -167,7 +167,7 @@
 /* ========================================
    Overlay - 标注覆盖层
    ======================================== */
-.vfb-overlay {
+.efa-overlay {
     position: fixed;
     top: 0;
     left: 0;
@@ -178,7 +178,7 @@
     pointer-events: auto;
 }
 
-.vfb-highlight {
+.efa-highlight {
     position: absolute;
     border: 2px solid #667eea;
     background: rgba(102, 126, 234, 0.1);
@@ -187,7 +187,7 @@
     transition: all 0.1s ease;
 }
 
-.vfb-highlight-label {
+.efa-highlight-label {
     position: absolute;
     top: -24px;
     left: 0;
@@ -205,7 +205,7 @@
 /* ========================================
    Comment Modal - 评论弹窗
    ======================================== */
-.vfb-modal-overlay {
+.efa-modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
@@ -216,24 +216,24 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    animation: vfb-fadeIn 0.2s ease;
+    animation: efa-fadeIn 0.2s ease;
 }
 
-@keyframes vfb-fadeIn {
+@keyframes efa-fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
 }
 
-.vfb-modal {
+.efa-modal {
     background: white;
     border-radius: 10px;
     width: 360px;
     max-width: 90%;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    animation: vfb-scaleIn 0.2s ease;
+    animation: efa-scaleIn 0.2s ease;
 }
 
-@keyframes vfb-scaleIn {
+@keyframes efa-scaleIn {
     from {
         opacity: 0;
         transform: scale(0.9);
@@ -244,7 +244,7 @@
     }
 }
 
-.vfb-modal-header {
+.efa-modal-header {
     padding: 12px 16px;
     border-bottom: 1px solid #eee;
     display: flex;
@@ -252,13 +252,13 @@
     align-items: center;
 }
 
-.vfb-modal-title {
+.efa-modal-title {
     font-weight: 600;
     font-size: 14px;
     color: #333;
 }
 
-.vfb-modal-close {
+.efa-modal-close {
     background: none;
     border: none;
     font-size: 18px;
@@ -267,15 +267,15 @@
     padding: 2px;
 }
 
-.vfb-modal-close:hover {
+.efa-modal-close:hover {
     color: #333;
 }
 
-.vfb-modal-body {
+.efa-modal-body {
     padding: 16px;
 }
 
-.vfb-modal-info {
+.efa-modal-info {
     background: #f8f9fa;
     padding: 10px;
     border-radius: 6px;
@@ -284,7 +284,7 @@
     color: #666;
 }
 
-.vfb-modal-info code {
+.efa-modal-info code {
     background: #e9ecef;
     padding: 2px 5px;
     border-radius: 3px;
@@ -293,7 +293,7 @@
     word-break: break-all;
 }
 
-.vfb-textarea {
+.efa-textarea {
     width: 100%;
     min-height: 80px;
     padding: 10px;
@@ -304,13 +304,13 @@
     font-family: inherit;
 }
 
-.vfb-textarea:focus {
+.efa-textarea:focus {
     outline: none;
     border-color: #667eea;
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
-.vfb-modal-footer {
+.efa-modal-footer {
     padding: 12px 16px;
     border-top: 1px solid #eee;
     display: flex;
@@ -321,7 +321,7 @@
 /* ========================================
    Screenshot Editor - 截图编辑器
    ======================================== */
-.vfb-screenshot-overlay {
+.efa-screenshot-overlay {
     position: fixed;
     top: 0;
     left: 0;
@@ -333,7 +333,7 @@
     flex-direction: column;
 }
 
-.vfb-screenshot-toolbar {
+.efa-screenshot-toolbar {
     background: #1a1a2e;
     padding: 12px 20px;
     display: flex;
@@ -341,26 +341,26 @@
     align-items: center;
 }
 
-.vfb-screenshot-toolbar-left {
+.efa-screenshot-toolbar-left {
     display: flex;
     gap: 10px;
     flex: 1;
 }
 
-.vfb-screenshot-toolbar-center {
+.efa-screenshot-toolbar-center {
     display: flex;
     justify-content: center;
     flex: 1;
 }
 
-.vfb-screenshot-toolbar-right {
+.efa-screenshot-toolbar-right {
     display: flex;
     gap: 10px;
     flex: 1;
     justify-content: flex-end;
 }
 
-.vfb-screenshot-btn {
+.efa-screenshot-btn {
     padding: 8px 16px;
     border: none;
     border-radius: 6px;
@@ -372,34 +372,34 @@
     transition: all 0.2s;
 }
 
-.vfb-screenshot-btn-default {
+.efa-screenshot-btn-default {
     background: #2d2d44;
     color: #fff;
 }
 
-.vfb-screenshot-btn-default:hover {
+.efa-screenshot-btn-default:hover {
     background: #3d3d5c;
 }
 
-.vfb-screenshot-btn-primary {
+.efa-screenshot-btn-primary {
     background: #667eea;
     color: white;
 }
 
-.vfb-screenshot-btn-primary:hover {
+.efa-screenshot-btn-primary:hover {
     background: #5a6fd6;
 }
 
-.vfb-screenshot-btn-danger {
+.efa-screenshot-btn-danger {
     background: #dc3545;
     color: white;
 }
 
-.vfb-screenshot-btn-danger:hover {
+.efa-screenshot-btn-danger:hover {
     background: #c82333;
 }
 
-.vfb-screenshot-canvas-container {
+.efa-screenshot-canvas-container {
     flex: 1;
     display: flex;
     align-items: center;
@@ -408,14 +408,14 @@
     padding: 20px;
 }
 
-.vfb-screenshot-canvas {
+.efa-screenshot-canvas {
     max-width: 100%;
     max-height: 100%;
     border: 2px solid #333;
     cursor: crosshair;
 }
 
-.vfb-screenshot-hint {
+.efa-screenshot-hint {
     position: absolute;
     bottom: 20px;
     left: 50%;
@@ -428,7 +428,7 @@
 }
 
 /* Screenshot Tool Group */
-.vfb-ss-tool-group {
+.efa-ss-tool-group {
     display: flex;
     gap: 2px;
     background: rgba(255, 255, 255, 0.1);
@@ -436,7 +436,7 @@
     border-radius: 5px;
 }
 
-.vfb-ss-tool {
+.efa-ss-tool {
     width: 28px;
     height: 28px;
     padding: 0;
@@ -451,21 +451,21 @@
     transition: all 0.2s;
 }
 
-.vfb-ss-tool svg {
+.efa-ss-tool svg {
     width: 16px;
     height: 16px;
 }
 
-.vfb-ss-tool:hover {
+.efa-ss-tool:hover {
     background: rgba(255, 255, 255, 0.2);
 }
 
-.vfb-ss-tool.active {
+.efa-ss-tool.active {
     background: #667eea;
     color: white;
 }
 
-.vfb-ss-divider {
+.efa-ss-divider {
     width: 1px;
     height: 28px;
     background: rgba(255, 255, 255, 0.3);
@@ -473,7 +473,7 @@
 }
 
 /* Screenshot Text Input */
-.vfb-ss-text-input-overlay {
+.efa-ss-text-input-overlay {
     position: fixed;
     top: 0;
     left: 0;
@@ -486,7 +486,7 @@
     justify-content: center;
 }
 
-.vfb-ss-text-input-box {
+.efa-ss-text-input-box {
     background: white;
     padding: 20px;
     border-radius: 10px;
@@ -494,7 +494,7 @@
     min-width: 300px;
 }
 
-.vfb-ss-text-input-box input {
+.efa-ss-text-input-box input {
     width: 100%;
     padding: 10px 12px;
     border: 2px solid #ddd;
@@ -503,18 +503,18 @@
     margin-bottom: 12px;
 }
 
-.vfb-ss-text-input-box input:focus {
+.efa-ss-text-input-box input:focus {
     outline: none;
     border-color: #667eea;
 }
 
-.vfb-ss-text-input-btns {
+.efa-ss-text-input-btns {
     display: flex;
     justify-content: flex-end;
     gap: 8px;
 }
 
-.vfb-ss-text-input-btns button {
+.efa-ss-text-input-btns button {
     padding: 8px 16px;
     border: none;
     border-radius: 6px;
@@ -523,28 +523,28 @@
     transition: all 0.2s;
 }
 
-.vfb-ss-text-cancel {
+.efa-ss-text-cancel {
     background: #6c757d;
     color: white;
 }
 
-.vfb-ss-text-cancel:hover {
+.efa-ss-text-cancel:hover {
     background: #5a6268;
 }
 
-.vfb-ss-text-ok {
+.efa-ss-text-ok {
     background: #667eea;
     color: white;
 }
 
-.vfb-ss-text-ok:hover {
+.efa-ss-text-ok:hover {
     background: #5a6fd6;
 }
 
 /* ========================================
    Page Markers - 页面标记点
    ======================================== */
-.vfb-marker {
+.efa-marker {
     position: absolute;
     width: 22px;
     height: 22px;
@@ -563,26 +563,26 @@
     pointer-events: auto;
 }
 
-.vfb-marker:hover {
+.efa-marker:hover {
     transform: scale(1.2);
 }
 
-.vfb-marker.element {
+.efa-marker.element {
     background: #667eea;
 }
 
-.vfb-marker.text {
+.efa-marker.text {
     background: #28a745;
 }
 
-.vfb-marker.screenshot {
+.efa-marker.screenshot {
     background: #fd7e14;
 }
 
 /* ========================================
    List Button Count - 列表按钮计数
    ======================================== */
-.vfb-list-count {
+.efa-list-count {
     position: absolute;
     top: -4px;
     right: -4px;
@@ -602,7 +602,7 @@
 /* ========================================
    List Panel - 列表面板
    ======================================== */
-.vfb-list-panel {
+.efa-list-panel {
     position: fixed;
     bottom: 70px;
     right: 20px;
@@ -612,11 +612,11 @@
     border-radius: 10px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
     overflow: hidden;
-    animation: vfb-slideUp 0.2s ease;
+    animation: efa-slideUp 0.2s ease;
     z-index: 99998;
 }
 
-@keyframes vfb-slideUp {
+@keyframes efa-slideUp {
     from {
         opacity: 0;
         transform: translateY(10px);
@@ -627,19 +627,19 @@
     }
 }
 
-.vfb-list-empty {
+.efa-list-empty {
     padding: 20px;
     text-align: center;
     color: #999;
     font-size: 13px;
 }
 
-.vfb-list-items {
+.efa-list-items {
     max-height: 300px;
     overflow-y: auto;
 }
 
-.vfb-list-item {
+.efa-list-item {
     display: flex;
     align-items: center;
     padding: 10px 12px;
@@ -649,15 +649,15 @@
     gap: 8px;
 }
 
-.vfb-list-item:last-child {
+.efa-list-item:last-child {
     border-bottom: none;
 }
 
-.vfb-list-item:hover {
+.efa-list-item:hover {
     background: #f8f9fa;
 }
 
-.vfb-list-item-num {
+.efa-list-item-num {
     width: 20px;
     height: 20px;
     border-radius: 50%;
@@ -671,19 +671,19 @@
     flex-shrink: 0;
 }
 
-.vfb-list-item-icon {
+.efa-list-item-icon {
     width: 16px;
     height: 16px;
     flex-shrink: 0;
 }
 
-.vfb-list-item-icon svg {
+.efa-list-item-icon svg {
     width: 16px;
     height: 16px;
     fill: #666;
 }
 
-.vfb-list-item-summary {
+.efa-list-item-summary {
     flex: 1;
     font-size: 12px;
     color: #333;
@@ -692,12 +692,12 @@
     text-overflow: ellipsis;
 }
 
-.vfb-list-item-comment {
+.efa-list-item-comment {
     font-size: 12px;
     flex-shrink: 0;
 }
 
-.vfb-list-item-resolved {
+.efa-list-item-resolved {
     font-size: 14px;
     font-weight: bold;
     color: #28a745;
@@ -705,11 +705,11 @@
     margin-left: 4px;
 }
 
-.vfb-list-item-is-resolved {
+.efa-list-item-is-resolved {
     opacity: 0.7;
 }
 
-.vfb-list-item-is-resolved .vfb-list-item-summary {
+.efa-list-item-is-resolved .efa-list-item-summary {
     text-decoration: line-through;
     color: #888;
 }
@@ -717,16 +717,16 @@
 /* ========================================
    Detail Modal Extras - 详情弹窗额外样式
    ======================================== */
-.vfb-detail-type,
-.vfb-detail-text,
-.vfb-detail-selector,
-.vfb-detail-context {
+.efa-detail-type,
+.efa-detail-text,
+.efa-detail-selector,
+.efa-detail-context {
     margin-bottom: 6px;
     font-size: 12px;
     line-height: 1.5;
 }
 
-.vfb-detail-selector code {
+.efa-detail-selector code {
     background: #e9ecef;
     padding: 2px 5px;
     border-radius: 3px;
@@ -735,11 +735,11 @@
     word-break: break-all;
 }
 
-.vfb-detail-image {
+.efa-detail-image {
     margin-top: 8px;
 }
 
-.vfb-btn {
+.efa-btn {
     padding: 8px 16px;
     border: none;
     border-radius: 6px;
@@ -751,34 +751,34 @@
     transition: all 0.2s;
 }
 
-.vfb-btn-primary {
+.efa-btn-primary {
     background: #667eea;
     color: white;
 }
 
-.vfb-btn-primary:hover {
+.efa-btn-primary:hover {
     background: #5a6fd6;
 }
 
-.vfb-btn-secondary {
+.efa-btn-secondary {
     background: #6c757d;
     color: white;
 }
 
-.vfb-btn-secondary:hover {
+.efa-btn-secondary:hover {
     background: #5a6268;
 }
 
-.vfb-btn-danger {
+.efa-btn-danger {
     background: #dc3545;
     color: white;
 }
 
-.vfb-btn-danger:hover {
+.efa-btn-danger:hover {
     background: #c82333;
 }
 
-.vfb-btn svg {
+.efa-btn svg {
     width: 14px;
     height: 14px;
     fill: currentColor;
@@ -787,7 +787,7 @@
 /* ========================================
    Toast - 提示消息
    ======================================== */
-.vfb-toast {
+.efa-toast {
     position: fixed;
     bottom: 70px;
     left: 50%;
@@ -798,18 +798,18 @@
     border-radius: 6px;
     font-size: 12px;
     z-index: 999999;
-    animation: vfb-toastIn 0.3s ease;
+    animation: efa-toastIn 0.3s ease;
 }
 
-.vfb-toast.success {
+.efa-toast.success {
     background: #28a745;
 }
 
-.vfb-toast.error {
+.efa-toast.error {
     background: #dc3545;
 }
 
-@keyframes vfb-toastIn {
+@keyframes efa-toastIn {
     from {
         opacity: 0;
         transform: translateX(-50%) translateY(20px);
@@ -823,7 +823,7 @@
 /* ========================================
    Text Selection - 文本选择
    ======================================== */
-.vfb-text-selection {
+.efa-text-selection {
     background: rgba(40, 167, 69, 0.3);
     border-bottom: 2px solid #28a745;
 }
@@ -831,7 +831,7 @@
 /* ========================================
    Region Selector - 区域选择器
    ======================================== */
-.vfb-region-overlay {
+.efa-region-overlay {
     position: fixed;
     top: 0;
     left: 0;
@@ -842,7 +842,7 @@
     cursor: crosshair;
 }
 
-.vfb-region-hint {
+.efa-region-hint {
     position: fixed;
     top: 20px;
     left: 50%;
@@ -856,7 +856,7 @@
     pointer-events: none;
 }
 
-.vfb-region-box {
+.efa-region-box {
     position: fixed;
     border: 2px dashed #ff6b35;
     background: rgba(255, 107, 53, 0.1);
@@ -868,10 +868,10 @@
 /* ========================================
    Locate Highlight - 定位高亮
    ======================================== */
-.vfb-locate-highlight {
+.efa-locate-highlight {
     outline: 4px solid #ff6b35 !important;
     outline-offset: 6px !important;
-    animation: vfb-highlight-blink 0.5s ease-in-out infinite !important;
+    animation: efa-highlight-blink 0.5s ease-in-out infinite !important;
     background-color: rgba(255, 107, 53, 0.2) !important;
     box-shadow:
         0 0 0 6px rgba(255, 107, 53, 0.4),
@@ -880,7 +880,7 @@
         inset 0 0 20px rgba(255, 107, 53, 0.1) !important;
 }
 
-@keyframes vfb-highlight-blink {
+@keyframes efa-highlight-blink {
     0%, 100% {
         outline-color: #ff6b35;
         outline-width: 4px;
@@ -892,7 +892,7 @@
 }
 
 /* Locate Loading Indicator - 定位加载指示器 */
-#vfb-locate-loading {
+#efa-locate-loading {
     position: fixed;
     top: 50%;
     left: 50%;
@@ -906,38 +906,38 @@
     gap: 10px;
     font-size: 13px;
     z-index: 999999;
-    animation: vfb-fadeIn 0.2s ease;
+    animation: efa-fadeIn 0.2s ease;
 }
 
-.vfb-locate-loading-spinner {
+.efa-locate-loading-spinner {
     width: 18px;
     height: 18px;
     border: 2px solid rgba(255, 255, 255, 0.3);
     border-top-color: #fff;
     border-radius: 50%;
-    animation: vfb-spin 0.8s linear infinite;
+    animation: efa-spin 0.8s linear infinite;
 }
 
-@keyframes vfb-spin {
+@keyframes efa-spin {
     to { transform: rotate(360deg); }
 }
 
 /* ========================================
    Info Button - 信息按钮
    ======================================== */
-.vfb-btn-info {
+.efa-btn-info {
     background: #17a2b8;
     color: white;
 }
 
-.vfb-btn-info:hover {
+.efa-btn-info:hover {
     background: #138496;
 }
 
 /* ========================================
    Status Badge - 状态标签
    ======================================== */
-.vfb-status-badge {
+.efa-status-badge {
     display: inline-block;
     padding: 2px 8px;
     border-radius: 10px;
@@ -947,43 +947,43 @@
     vertical-align: middle;
 }
 
-.vfb-status-pending {
+.efa-status-pending {
     background: #fff3cd;
     color: #856404;
 }
 
-.vfb-status-in_progress {
+.efa-status-in_progress {
     background: #cce5ff;
     color: #004085;
 }
 
-.vfb-status-resolved {
+.efa-status-resolved {
     background: #d4edda;
     color: #155724;
 }
 
 /* Developer Response - 开发者回复 */
-.vfb-dev-response {
+.efa-dev-response {
     margin-top: 12px;
     padding-top: 12px;
     border-top: 1px dashed #ddd;
 }
 
 /* Developer Mode - 开发者模式 */
-.vfb-toolbar.vfb-dev-mode .vfb-toolbar-expanded {
+.efa-toolbar.efa-dev-mode .efa-toolbar-expanded {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
-.vfb-toolbar.vfb-dev-mode .vfb-toolbar-collapsed {
+.efa-toolbar.efa-dev-mode .efa-toolbar-collapsed {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
-#vfb-dev.active {
+#efa-dev.active {
     background: rgba(255, 255, 255, 0.35);
     color: #ffd700;
 }
 
-.vfb-dev-controls {
+.efa-dev-controls {
     background: #f8f9ff;
     margin: 12px -16px -16px -16px;
     padding: 12px 16px 16px 16px;
@@ -993,7 +993,7 @@
 /* ========================================
    Image Lightbox - 图片灯箱
    ======================================== */
-.vfb-lightbox {
+.efa-lightbox {
     position: fixed;
     top: 0;
     left: 0;
@@ -1005,10 +1005,10 @@
     align-items: center;
     justify-content: center;
     cursor: zoom-out;
-    animation: vfb-fadeIn 0.2s ease;
+    animation: efa-fadeIn 0.2s ease;
 }
 
-.vfb-lightbox-content {
+.efa-lightbox-content {
     position: relative;
     max-width: 95%;
     max-height: 95%;
@@ -1017,7 +1017,7 @@
     justify-content: center;
 }
 
-.vfb-lightbox-img {
+.efa-lightbox-img {
     max-width: 100%;
     max-height: 90vh;
     object-fit: contain;
@@ -1025,7 +1025,7 @@
     box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5);
 }
 
-.vfb-lightbox-close {
+.efa-lightbox-close {
     position: absolute;
     top: -40px;
     right: 0;
@@ -1040,11 +1040,11 @@
     transition: opacity 0.2s;
 }
 
-.vfb-lightbox-close:hover {
+.efa-lightbox-close:hover {
     opacity: 1;
 }
 
-.vfb-lightbox-hint {
+.efa-lightbox-hint {
     position: absolute;
     bottom: -35px;
     left: 50%;
@@ -1058,27 +1058,27 @@
    Responsive - 响应式
    ======================================== */
 @media (max-width: 480px) {
-    .vfb-toolbar {
+    .efa-toolbar {
         bottom: 12px;
         right: 12px;
     }
 
-    .vfb-toolbar-expanded {
+    .efa-toolbar-expanded {
         padding: 4px 8px;
         gap: 2px;
     }
 
-    .vfb-tool-btn {
+    .efa-tool-btn {
         width: 28px;
         height: 28px;
     }
 
-    .vfb-tool-btn svg {
+    .efa-tool-btn svg {
         width: 16px;
         height: 16px;
     }
 
-    .vfb-divider {
+    .efa-divider {
         height: 20px;
         margin: 0 2px;
     }

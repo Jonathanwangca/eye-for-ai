@@ -1,5 +1,5 @@
 /**
- * Visual Feedback - Screenshot Module
+ * Eye for AI - Screenshot Module
  * 视觉反馈 - 截图模块
  * Version: 2.0 - Added Arrow and Text tools
  */
@@ -7,7 +7,7 @@
 (function() {
     'use strict';
 
-    const VFBScreenshot = {
+    const EFAScreenshot = {
         canvas: null,
         ctx: null,
         originalImage: null,
@@ -35,7 +35,7 @@
     /**
      * Open screenshot editor
      */
-    VFBScreenshot.open = function(sourceCanvas, onConfirm, onCancel) {
+    EFAScreenshot.open = function(sourceCanvas, onConfirm, onCancel) {
         this.onConfirm = onConfirm;
         this.onCancel = onCancel;
         this.annotations = [];
@@ -53,50 +53,50 @@
     /**
      * Create editor overlay
      */
-    VFBScreenshot.createEditor = function() {
+    EFAScreenshot.createEditor = function() {
         const overlay = document.createElement('div');
-        overlay.className = 'vfb-screenshot-overlay';
-        overlay.id = 'vfb-screenshot-overlay';
+        overlay.className = 'efa-screenshot-overlay';
+        overlay.id = 'efa-screenshot-overlay';
         overlay.innerHTML = `
-            <div class="vfb-screenshot-toolbar">
-                <div class="vfb-screenshot-toolbar-left">
-                    <button class="vfb-screenshot-btn vfb-screenshot-btn-default" id="vfb-ss-undo">
+            <div class="efa-screenshot-toolbar">
+                <div class="efa-screenshot-toolbar-left">
+                    <button class="efa-screenshot-btn efa-screenshot-btn-default" id="efa-ss-undo">
                         ${Icons.undo}
                         <span>Undo</span>
                     </button>
-                    <button class="vfb-screenshot-btn vfb-screenshot-btn-default" id="vfb-ss-clear">
+                    <button class="efa-screenshot-btn efa-screenshot-btn-default" id="efa-ss-clear">
                         ${Icons.clear}
                         <span>Clear</span>
                     </button>
                 </div>
-                <div class="vfb-screenshot-toolbar-center">
-                    <div class="vfb-ss-tool-group">
-                        <button class="vfb-screenshot-btn vfb-ss-tool active" data-tool="rect" title="Rectangle (1)">
+                <div class="efa-screenshot-toolbar-center">
+                    <div class="efa-ss-tool-group">
+                        <button class="efa-screenshot-btn efa-ss-tool active" data-tool="rect" title="Rectangle (1)">
                             ${Icons.rect}
                         </button>
-                        <button class="vfb-screenshot-btn vfb-ss-tool" data-tool="arrow" title="Arrow (2)">
+                        <button class="efa-screenshot-btn efa-ss-tool" data-tool="arrow" title="Arrow (2)">
                             ${Icons.arrow}
                         </button>
-                        <button class="vfb-screenshot-btn vfb-ss-tool" data-tool="text" title="Text (3)">
+                        <button class="efa-screenshot-btn efa-ss-tool" data-tool="text" title="Text (3)">
                             ${Icons.text}
                         </button>
                     </div>
                 </div>
-                <div class="vfb-screenshot-toolbar-right">
-                    <button class="vfb-screenshot-btn vfb-screenshot-btn-danger" id="vfb-ss-cancel">
+                <div class="efa-screenshot-toolbar-right">
+                    <button class="efa-screenshot-btn efa-screenshot-btn-danger" id="efa-ss-cancel">
                         ${Icons.close}
                         <span>Cancel</span>
                     </button>
-                    <button class="vfb-screenshot-btn vfb-screenshot-btn-primary" id="vfb-ss-confirm">
+                    <button class="efa-screenshot-btn efa-screenshot-btn-primary" id="efa-ss-confirm">
                         ${Icons.check}
                         <span>Confirm</span>
                     </button>
                 </div>
             </div>
-            <div class="vfb-screenshot-canvas-container">
-                <canvas class="vfb-screenshot-canvas" id="vfb-ss-canvas"></canvas>
+            <div class="efa-screenshot-canvas-container">
+                <canvas class="efa-screenshot-canvas" id="efa-ss-canvas"></canvas>
             </div>
-            <div class="vfb-screenshot-hint" id="vfb-ss-hint">
+            <div class="efa-screenshot-hint" id="efa-ss-hint">
                 Rectangle: Drag to draw | Arrow: Drag to draw | Text: Click to add
             </div>
         `;
@@ -104,7 +104,7 @@
         document.body.appendChild(overlay);
 
         // Setup canvas
-        this.canvas = document.getElementById('vfb-ss-canvas');
+        this.canvas = document.getElementById('efa-ss-canvas');
         this.ctx = this.canvas.getContext('2d');
 
         // Set canvas size
@@ -136,14 +136,14 @@
     /**
      * Bind canvas events
      */
-    VFBScreenshot.bindEvents = function() {
+    EFAScreenshot.bindEvents = function() {
         const canvas = this.canvas;
         const self = this;
 
         // Tool selection
-        document.querySelectorAll('.vfb-ss-tool').forEach(btn => {
+        document.querySelectorAll('.efa-ss-tool').forEach(btn => {
             btn.addEventListener('click', () => {
-                document.querySelectorAll('.vfb-ss-tool').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.efa-ss-tool').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 self.currentTool = btn.dataset.tool;
                 self.updateHint();
@@ -208,24 +208,24 @@
         });
 
         // Button events
-        document.getElementById('vfb-ss-undo').addEventListener('click', () => {
+        document.getElementById('efa-ss-undo').addEventListener('click', () => {
             if (self.annotations.length > 0) {
                 self.annotations.pop();
                 self.redraw();
             }
         });
 
-        document.getElementById('vfb-ss-clear').addEventListener('click', () => {
+        document.getElementById('efa-ss-clear').addEventListener('click', () => {
             self.annotations = [];
             self.redraw();
         });
 
-        document.getElementById('vfb-ss-cancel').addEventListener('click', () => {
+        document.getElementById('efa-ss-cancel').addEventListener('click', () => {
             self.close();
             if (self.onCancel) self.onCancel();
         });
 
-        document.getElementById('vfb-ss-confirm').addEventListener('click', () => {
+        document.getElementById('efa-ss-confirm').addEventListener('click', () => {
             const imageData = self.canvas.toDataURL('image/png');
             self.close();
             if (self.onConfirm) self.onConfirm(imageData);
@@ -238,8 +238,8 @@
     /**
      * Update hint text
      */
-    VFBScreenshot.updateHint = function() {
-        const hint = document.getElementById('vfb-ss-hint');
+    EFAScreenshot.updateHint = function() {
+        const hint = document.getElementById('efa-ss-hint');
         if (!hint) return;
 
         switch (this.currentTool) {
@@ -258,24 +258,24 @@
     /**
      * Show text input dialog
      */
-    VFBScreenshot.showTextInput = function(x, y) {
+    EFAScreenshot.showTextInput = function(x, y) {
         const self = this;
 
         // Create input overlay
         const inputOverlay = document.createElement('div');
-        inputOverlay.className = 'vfb-ss-text-input-overlay';
+        inputOverlay.className = 'efa-ss-text-input-overlay';
         inputOverlay.innerHTML = `
-            <div class="vfb-ss-text-input-box">
-                <input type="text" id="vfb-ss-text-input" placeholder="Enter text..." maxlength="50">
-                <div class="vfb-ss-text-input-btns">
-                    <button class="vfb-ss-text-cancel">Cancel</button>
-                    <button class="vfb-ss-text-ok">OK</button>
+            <div class="efa-ss-text-input-box">
+                <input type="text" id="efa-ss-text-input" placeholder="Enter text..." maxlength="50">
+                <div class="efa-ss-text-input-btns">
+                    <button class="efa-ss-text-cancel">Cancel</button>
+                    <button class="efa-ss-text-ok">OK</button>
                 </div>
             </div>
         `;
         document.body.appendChild(inputOverlay);
 
-        const input = document.getElementById('vfb-ss-text-input');
+        const input = document.getElementById('efa-ss-text-input');
         input.focus();
 
         const closeInput = () => {
@@ -296,8 +296,8 @@
             closeInput();
         };
 
-        inputOverlay.querySelector('.vfb-ss-text-cancel').addEventListener('click', closeInput);
-        inputOverlay.querySelector('.vfb-ss-text-ok').addEventListener('click', addText);
+        inputOverlay.querySelector('.efa-ss-text-cancel').addEventListener('click', closeInput);
+        inputOverlay.querySelector('.efa-ss-text-ok').addEventListener('click', addText);
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 addText();
@@ -310,39 +310,39 @@
     /**
      * Handle keyboard shortcuts
      */
-    VFBScreenshot.handleKeydown = function(e) {
-        if (!document.getElementById('vfb-screenshot-overlay')) return;
+    EFAScreenshot.handleKeydown = function(e) {
+        if (!document.getElementById('efa-screenshot-overlay')) return;
         // Don't handle if text input is focused
-        if (document.getElementById('vfb-ss-text-input')) return;
+        if (document.getElementById('efa-ss-text-input')) return;
 
         if (e.key === 'Escape') {
-            VFBScreenshot.close();
-            if (VFBScreenshot.onCancel) VFBScreenshot.onCancel();
+            EFAScreenshot.close();
+            if (EFAScreenshot.onCancel) EFAScreenshot.onCancel();
         } else if (e.key === 'Enter') {
-            const imageData = VFBScreenshot.canvas.toDataURL('image/png');
-            VFBScreenshot.close();
-            if (VFBScreenshot.onConfirm) VFBScreenshot.onConfirm(imageData);
+            const imageData = EFAScreenshot.canvas.toDataURL('image/png');
+            EFAScreenshot.close();
+            if (EFAScreenshot.onConfirm) EFAScreenshot.onConfirm(imageData);
         } else if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
             e.preventDefault();
-            if (VFBScreenshot.annotations.length > 0) {
-                VFBScreenshot.annotations.pop();
-                VFBScreenshot.redraw();
+            if (EFAScreenshot.annotations.length > 0) {
+                EFAScreenshot.annotations.pop();
+                EFAScreenshot.redraw();
             }
         } else if (e.key === '1') {
-            VFBScreenshot.selectTool('rect');
+            EFAScreenshot.selectTool('rect');
         } else if (e.key === '2') {
-            VFBScreenshot.selectTool('arrow');
+            EFAScreenshot.selectTool('arrow');
         } else if (e.key === '3') {
-            VFBScreenshot.selectTool('text');
+            EFAScreenshot.selectTool('text');
         }
     };
 
     /**
      * Select tool programmatically
      */
-    VFBScreenshot.selectTool = function(tool) {
+    EFAScreenshot.selectTool = function(tool) {
         this.currentTool = tool;
-        document.querySelectorAll('.vfb-ss-tool').forEach(btn => {
+        document.querySelectorAll('.efa-ss-tool').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.tool === tool);
         });
         this.updateHint();
@@ -351,7 +351,7 @@
     /**
      * Redraw canvas
      */
-    VFBScreenshot.redraw = function() {
+    EFAScreenshot.redraw = function() {
         const ctx = this.ctx;
         const canvas = this.canvas;
 
@@ -370,7 +370,7 @@
     /**
      * Draw a single annotation
      */
-    VFBScreenshot.drawAnnotation = function(ann, isTemp) {
+    EFAScreenshot.drawAnnotation = function(ann, isTemp) {
         const ctx = this.ctx;
 
         ctx.strokeStyle = '#ff0000';
@@ -392,7 +392,7 @@
     /**
      * Draw rectangle
      */
-    VFBScreenshot.drawRect = function(ann, isTemp) {
+    EFAScreenshot.drawRect = function(ann, isTemp) {
         const ctx = this.ctx;
         const x = Math.min(ann.x, ann.endX);
         const y = Math.min(ann.y, ann.endY);
@@ -419,7 +419,7 @@
     /**
      * Draw arrow
      */
-    VFBScreenshot.drawArrow = function(ann, isTemp) {
+    EFAScreenshot.drawArrow = function(ann, isTemp) {
         const ctx = this.ctx;
         const fromX = ann.x;
         const fromY = ann.y;
@@ -460,7 +460,7 @@
     /**
      * Draw text
      */
-    VFBScreenshot.drawText = function(ann) {
+    EFAScreenshot.drawText = function(ann) {
         const ctx = this.ctx;
 
         ctx.font = 'bold 16px Arial, sans-serif';
@@ -490,12 +490,12 @@
     /**
      * Close editor
      */
-    VFBScreenshot.close = function() {
-        const overlay = document.getElementById('vfb-screenshot-overlay');
+    EFAScreenshot.close = function() {
+        const overlay = document.getElementById('efa-screenshot-overlay');
         if (overlay) {
             overlay.remove();
         }
-        const textInput = document.querySelector('.vfb-ss-text-input-overlay');
+        const textInput = document.querySelector('.efa-ss-text-input-overlay');
         if (textInput) {
             textInput.remove();
         }
@@ -507,6 +507,6 @@
     };
 
     // Expose to global
-    window.VFBScreenshot = VFBScreenshot;
+    window.EFAScreenshot = EFAScreenshot;
 
 })();

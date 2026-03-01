@@ -4,7 +4,7 @@ Tags: feedback, annotation, screenshot, visual, bug-report, ai
 Requires at least: 5.8
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 1.1.0
+Stable tag: 1.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -30,7 +30,7 @@ Eye for AI adds a floating toolbar to your WordPress site that lets visitors and
 
 * WP REST API endpoints under `eye-for-ai/v1`
 * AI endpoints at `/ai/pending` and `/ai/batch` with API Key or Application Password auth
-* Annotations stored in custom DB tables (`wp_vfb_sessions`, `wp_vfb_annotations`)
+* Annotations stored in custom DB tables (`wp_efa_sessions`, `wp_efa_annotations`)
 * Screenshots stored in `wp-content/uploads/eye-for-ai/`
 * Clean uninstall — drops tables, removes options and uploads
 
@@ -51,9 +51,17 @@ All visitors see the toolbar by default. You can disable it in Settings > Eye fo
 Users with the `manage_options` capability (Administrators) can access the admin panel and developer mode.
 
 = How does the AI API work? =
-Enable it in Settings, generate an API key, and use `GET /wp-json/eye-for-ai/v1/ai/pending` with the `X-VFB-API-Key` header. See the plugin documentation for full details.
+Enable it in Settings, generate an API key, and use `GET /wp-json/eye-for-ai/v1/ai/pending` with the `X-EFA-API-Key` header. See the plugin documentation for full details.
 
 == Changelog ==
+
+= 1.2.0 =
+* Internal code rename: VFB → EFA throughout codebase
+* Unified frontend JS with dual apiMode (WordPress REST + standalone PHP)
+* Standalone edition now records full URLs and element positions
+* DB tables renamed: wp_efa_sessions, wp_efa_annotations
+* API key header: X-EFA-API-Key (backwards compatible with X-VFB-API-Key)
+* Auto-migration from VFB tables/options on upgrade
 
 = 1.1.0 =
 * Renamed plugin to Eye for AI

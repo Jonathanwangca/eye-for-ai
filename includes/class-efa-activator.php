@@ -3,7 +3,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-class VFB_Activator {
+class EFA_Activator {
 
     /**
      * Run on plugin activation.
@@ -14,8 +14,8 @@ class VFB_Activator {
         self::create_upload_dir();
 
         // Schedule cleanup cron
-        if ( ! wp_next_scheduled( 'vfb_cleanup_sessions' ) ) {
-            wp_schedule_event( time(), 'daily', 'vfb_cleanup_sessions' );
+        if ( ! wp_next_scheduled( 'efa_cleanup_sessions' ) ) {
+            wp_schedule_event( time(), 'daily', 'efa_cleanup_sessions' );
         }
     }
 
@@ -26,8 +26,8 @@ class VFB_Activator {
         global $wpdb;
         $charset_collate = $wpdb->get_charset_collate();
 
-        $sessions_table = $wpdb->prefix . 'vfb_sessions';
-        $annotations_table = $wpdb->prefix . 'vfb_annotations';
+        $sessions_table = $wpdb->prefix . 'efa_sessions';
+        $annotations_table = $wpdb->prefix . 'efa_annotations';
 
         $sql = "CREATE TABLE {$sessions_table} (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -70,19 +70,19 @@ class VFB_Activator {
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
         dbDelta( $sql );
 
-        update_option( 'vfb_db_version', '1.1.0' );
+        update_option( 'efa_db_version', '1.2.0' );
     }
 
     /**
      * Set default options.
      */
     private static function set_defaults() {
-        add_option( 'vfb_enabled', '1' );
-        add_option( 'vfb_capability', 'manage_options' );
-        add_option( 'vfb_session_expiry_hours', '72' );
-        add_option( 'vfb_screenshot_max_size', '2' ); // MB
-        add_option( 'vfb_ai_enabled', '0' );
-        add_option( 'vfb_ai_api_key', '' );
+        add_option( 'efa_enabled', '1' );
+        add_option( 'efa_capability', 'manage_options' );
+        add_option( 'efa_session_expiry_hours', '72' );
+        add_option( 'efa_screenshot_max_size', '2' ); // MB
+        add_option( 'efa_ai_enabled', '0' );
+        add_option( 'efa_ai_api_key', '' );
     }
 
     /**
@@ -90,20 +90,20 @@ class VFB_Activator {
      */
     private static function create_upload_dir() {
         $upload_dir = wp_upload_dir();
-        $vfb_dir = $upload_dir['basedir'] . '/eye-for-ai';
+        $efa_dir = $upload_dir['basedir'] . '/eye-for-ai';
 
-        if ( ! is_dir( $vfb_dir ) ) {
-            wp_mkdir_p( $vfb_dir );
+        if ( ! is_dir( $efa_dir ) ) {
+            wp_mkdir_p( $efa_dir );
         }
 
         // Protect directory with .htaccess (allow images only)
-        $htaccess = $vfb_dir . '/.htaccess';
+        $htaccess = $efa_dir . '/.htaccess';
         if ( ! file_exists( $htaccess ) ) {
             file_put_contents( $htaccess, "Options -Indexes\n<FilesMatch '\\.(?:png|jpe?g|gif|webp)$'>\n    Require all granted\n</FilesMatch>\n<FilesMatch '(?<!\\.(png|jpe?g|gif|webp))$'>\n    Require all denied\n</FilesMatch>\n" );
         }
 
         // Also add an index.php for extra protection
-        $index = $vfb_dir . '/index.php';
+        $index = $efa_dir . '/index.php';
         if ( ! file_exists( $index ) ) {
             file_put_contents( $index, '<?php // Silence is golden.' );
         }

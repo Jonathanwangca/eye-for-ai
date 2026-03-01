@@ -3,7 +3,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-class VFB_Frontend {
+class EFA_Frontend {
 
     /**
      * Enqueue frontend assets.
@@ -12,47 +12,48 @@ class VFB_Frontend {
         // html2canvas (bundled)
         wp_enqueue_script(
             'html2canvas',
-            VFB_PLUGIN_URL . 'assets/vendor/html2canvas.min.js',
+            EFA_PLUGIN_URL . 'assets/vendor/html2canvas.min.js',
             array(),
             '1.4.1',
             true
         );
 
-        // VFB Screenshot module
+        // EFA Screenshot module
         wp_enqueue_script(
-            'vfb-screenshot',
-            VFB_PLUGIN_URL . 'assets/js/vfb-screenshot.js',
+            'efa-screenshot',
+            EFA_PLUGIN_URL . 'assets/js/efa-screenshot.js',
             array( 'html2canvas' ),
-            VFB_VERSION,
+            EFA_VERSION,
             true
         );
 
-        // VFB main
+        // EFA main
         wp_enqueue_script(
-            'vfb-main',
-            VFB_PLUGIN_URL . 'assets/js/vfb.js',
-            array( 'vfb-screenshot' ),
-            VFB_VERSION,
+            'efa-main',
+            EFA_PLUGIN_URL . 'assets/js/efa.js',
+            array( 'efa-screenshot' ),
+            EFA_VERSION,
             true
         );
 
-        // VFB CSS
+        // EFA CSS
         wp_enqueue_style(
-            'vfb-style',
-            VFB_PLUGIN_URL . 'assets/css/vfb.css',
+            'efa-style',
+            EFA_PLUGIN_URL . 'assets/css/efa.css',
             array(),
-            VFB_VERSION
+            EFA_VERSION
         );
 
         // Inject configuration
-        $is_admin = current_user_can( get_option( 'vfb_capability', 'manage_options' ) );
+        $is_admin = current_user_can( get_option( 'efa_capability', 'manage_options' ) );
 
         $config = array(
             'apiBase' => rest_url( 'eye-for-ai/v1' ),
+            'apiMode' => 'rest',
             'nonce'   => wp_create_nonce( 'wp_rest' ),
             'isAdmin' => $is_admin,
             'debug'   => defined( 'WP_DEBUG' ) && WP_DEBUG,
-            'version' => VFB_VERSION,
+            'version' => EFA_VERSION,
             'i18n'    => array(
                 // Toolbar
                 'feedback'        => __( 'Feedback', 'eye-for-ai' ),
@@ -94,6 +95,6 @@ class VFB_Frontend {
             ),
         );
 
-        wp_add_inline_script( 'vfb-main', 'window.VFBConfig = ' . wp_json_encode( $config ) . ';', 'before' );
+        wp_add_inline_script( 'efa-main', 'window.EFAConfig = ' . wp_json_encode( $config ) . ';', 'before' );
     }
 }
