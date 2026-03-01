@@ -1,0 +1,1877 @@
+/**
+ * Visual Feedback Tool
+ * 视觉反馈工具
+ * Version: 1.5
+ */
+
+(function() {
+    'use strict';
+
+    // ========================================
+    // Configuration from WordPress - 配置
+    // ========================================
+    const cfg = window.VFBConfig || {};
+
+    const VFB = {
+        version: cfg.version || '1.0.0',
+        apiBase: cfg.apiBase || '/wp-json/eye-for-ai/v1',
+        nonce: cfg.nonce || '',
+        isActive: false,
+        isDevMode: !!cfg.isAdmin,
+        debug: !!cfg.debug,
+        i18n: cfg.i18n || {},
+        currentTool: null, // 'element', 'text', 'screenshot'
+        annotations: [],
+        elements: {
+            toolbar: null,
+            overlay: null,
+            highlight: null
+        }
+    };
+
+    // ========================================
+    // Icons - 图标
+    // ========================================
+    const Icons = {
+        pin: '<svg viewBox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>',
+        element: '<svg viewBox="0 0 24 24"><path d="M3 3h18v18H3V3zm2 2v14h14V5H5zm2 2h10v2H7V7zm0 4h10v2H7v-2zm0 4h7v2H7v-2z"/></svg>',
+        text: '<svg viewBox="0 0 24 24"><path d="M5 4v3h5.5v12h3V7H19V4H5z"/></svg>',
+        screenshot: '<svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>',
+        copy: '<svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>',
+        close: '<svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>',
+        delete: '<svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>',
+        clear: '<svg viewBox="0 0 24 24"><path d="M5 13h14v-2H5v2zm-2 4h14v-2H3v2zM7 7v2h14V7H7z"/></svg>',
+        undo: '<svg viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>',
+        check: '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>',
+        save: '<svg viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>',
+        list: '<svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>',
+        locate: '<svg viewBox="0 0 24 24"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>',
+        dev: '<svg viewBox="0 0 24 24"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>'
+    };
+
+    // ========================================
+    // Utility Functions - 工具函数
+    // ========================================
+
+    /**
+     * Generate unique ID
+     */
+    function generateId() {
+        return 'ann_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    /**
+     * Get CSS selector for element
+     */
+    function getSelector(el) {
+        if (!el || el === document.body) return 'body';
+
+        const parts = [];
+        while (el && el !== document.body) {
+            let selector = el.tagName.toLowerCase();
+
+            // Use getAttribute to avoid form input shadowing issues
+            // (e.g., <input name="id"> shadows form.id property)
+            const elId = el.getAttribute && el.getAttribute('id');
+            if (elId && typeof elId === 'string' && /^[a-zA-Z_][a-zA-Z0-9_-]*$/.test(elId)) {
+                selector += '#' + elId;
+                parts.unshift(selector);
+                break;
+            }
+
+            // Use getAttribute for className too to avoid similar issues
+            const className = el.getAttribute && el.getAttribute('class');
+            if (className && typeof className === 'string') {
+                const classes = className.trim().split(/\s+/).filter(c => !c.startsWith('vfb-') && /^[a-zA-Z_][a-zA-Z0-9_-]*$/.test(c));
+                if (classes.length) {
+                    selector += '.' + classes.slice(0, 2).join('.');
+                }
+            }
+
+            // Add nth-of-type if needed (use nth-of-type instead of nth-child
+            // because we count same-tag siblings, not all children)
+            const parent = el.parentElement;
+            if (parent) {
+                const siblings = Array.from(parent.children).filter(c => c.tagName === el.tagName);
+                if (siblings.length > 1) {
+                    const index = siblings.indexOf(el) + 1;
+                    selector += ':nth-of-type(' + index + ')';
+                }
+            }
+
+            parts.unshift(selector);
+            el = parent;
+        }
+
+        return parts.join(' > ');
+    }
+
+    /**
+     * Get element text content (truncated)
+     */
+    function getElementText(el, maxLength = 50) {
+        const text = el.innerText || el.textContent || '';
+        const cleaned = text.trim().replace(/\s+/g, ' ');
+        return cleaned.length > maxLength ? cleaned.substr(0, maxLength) + '...' : cleaned;
+    }
+
+    /**
+     * Show toast message
+     */
+    function showToast(message, type = 'default') {
+        const existing = document.querySelector('.vfb-toast');
+        if (existing) existing.remove();
+
+        const toast = document.createElement('div');
+        toast.className = 'vfb-toast ' + type;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+
+        setTimeout(() => toast.remove(), 3000);
+    }
+
+    /**
+     * Copy text to clipboard
+     */
+    async function copyToClipboard(text) {
+        try {
+            await navigator.clipboard.writeText(text);
+            return true;
+        } catch (err) {
+            // Fallback
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            const result = document.execCommand('copy');
+            document.body.removeChild(textarea);
+            return result;
+        }
+    }
+
+    // ========================================
+    // API Functions - API 函数
+    // ========================================
+
+    /**
+     * WP REST API request helper.
+     * @param {string} endpoint - REST path relative to apiBase (e.g. '/annotations')
+     * @param {object|null} data - Body or query params
+     * @param {string} method - HTTP method
+     */
+    async function apiRequest(endpoint, data = null, method = 'GET') {
+        let url = VFB.apiBase.replace(/\/$/, '') + endpoint;
+
+        const options = {
+            method: method,
+            headers: {
+                'X-WP-Nonce': VFB.nonce
+            },
+            credentials: 'same-origin'
+        };
+
+        if (method === 'GET' && data) {
+            const params = new URLSearchParams();
+            Object.keys(data).forEach(key => params.set(key, data[key]));
+            url += '?' + params.toString();
+        } else if (data && (method === 'POST' || method === 'PATCH' || method === 'DELETE')) {
+            options.headers['Content-Type'] = 'application/json';
+            options.body = JSON.stringify(data);
+        }
+
+        if (VFB.debug) {
+            console.log('[VFB Debug] apiRequest:', { endpoint, url, method, data });
+        }
+
+        try {
+            let response = await fetch(url, options);
+
+            // Nonce expired — refresh and retry once
+            if (response.status === 401 || response.status === 403) {
+                const refreshed = await refreshNonce();
+                if (refreshed) {
+                    options.headers['X-WP-Nonce'] = VFB.nonce;
+                    response = await fetch(url, options);
+                }
+            }
+
+            const result = await response.json();
+
+            if (VFB.debug) {
+                console.log('[VFB Debug] apiResponse:', { endpoint, status: response.status, result });
+            }
+
+            return result;
+        } catch (error) {
+            console.error('VFB API Error:', error);
+            return { success: false, message: error.message };
+        }
+    }
+
+    /**
+     * Refresh nonce by calling POST /session
+     */
+    async function refreshNonce() {
+        try {
+            const resp = await fetch(VFB.apiBase.replace(/\/$/, '') + '/session', {
+                method: 'POST',
+                credentials: 'same-origin'
+            });
+            const data = await resp.json();
+            if (data.success && data.nonce) {
+                VFB.nonce = data.nonce;
+                return true;
+            }
+        } catch (e) {
+            console.error('[VFB] Nonce refresh failed:', e);
+        }
+        return false;
+    }
+
+    async function loadAnnotations() {
+        const params = { page_url: window.location.href };
+        if (VFB.isDevMode) {
+            params.all = '1';
+        }
+
+        const result = await apiRequest('/annotations', params);
+
+        if (result.success) {
+            VFB.annotations = (result.annotations || []).map(a => {
+                // Map DB fields to frontend format
+                a.id = a.annotation_key || String(a.id);
+                a._db_id = a.id; // Keep DB id for API calls
+                if (typeof a.annotation_key !== 'undefined' && a.annotation_key) {
+                    a.id = a.annotation_key;
+                }
+                a._db_id = result.annotations ? a._db_id : a.id;
+                a.timestamp = a.created_at;
+                return a;
+            });
+
+            // Re-map: use original response to get _db_id
+            VFB.annotations = (result.annotations || []).map(a => {
+                // Parse element_position from JSON string
+                if (a.element_position && typeof a.element_position === 'string') {
+                    try { a.element_position = JSON.parse(a.element_position); } catch (e) { /* ignore */ }
+                }
+                return {
+                    ...a,
+                    _db_id: a.id, // DB primary key
+                    id: a.annotation_key || String(a.id), // Frontend ID
+                    timestamp: a.created_at
+                };
+            });
+
+            renderAnnotationList();
+            renderPageMarkers();
+
+            if (VFB.isDevMode && result.annotations) {
+                showToast(`Dev Mode: ${result.annotations.length} annotations`, 'default');
+            }
+        }
+    }
+
+    /**
+     * Save a single annotation via POST /annotations.
+     * @param {object} annotation - The annotation to save.
+     * @param {boolean} silent - Suppress toast messages.
+     */
+    async function saveAnnotation(annotation, silent = false) {
+        const payload = {
+            ...annotation,
+            id: annotation.id, // annotation_key
+            page_url: window.location.href,
+            page_title: document.title
+        };
+
+        // Serialize position object to JSON string for storage
+        if (payload.element_position && typeof payload.element_position === 'object') {
+            payload.element_position = JSON.stringify(payload.element_position);
+        }
+
+        const result = await apiRequest('/annotations', payload, 'POST');
+
+        if (result.success && result.id) {
+            annotation._db_id = result.id;
+        }
+
+        if (!silent) {
+            if (result.success) {
+                showToast(VFB.i18n.saved || 'Saved', 'success');
+            } else {
+                showToast(VFB.i18n.error || 'Save failed', 'error');
+            }
+        }
+        return result;
+    }
+
+    // Keep saveAnnotations as a compat wrapper for the auto-save call
+    async function saveAnnotations(silent = false) {
+        // No-op: individual saves handled by saveAnnotation
+        return { success: true };
+    }
+
+    async function deleteAnnotation(annotationId) {
+        const ann = VFB.annotations.find(a => a.id === annotationId);
+        const dbId = ann ? (ann._db_id || ann.id) : annotationId;
+
+        if (VFB.debug) {
+            console.log('[VFB Debug] deleteAnnotation:', { annotationId, dbId });
+        }
+
+        const result = await apiRequest('/annotations/' + dbId, null, 'DELETE');
+
+        if (result.success) {
+            VFB.annotations = VFB.annotations.filter(a => a.id !== annotationId);
+            renderAnnotationList();
+            renderPageMarkers();
+            showToast(VFB.i18n.deleted || 'Deleted', 'success');
+        } else {
+            showToast(result.message || VFB.i18n.error || 'Delete failed', 'error');
+        }
+    }
+
+    async function exportMarkdown() {
+        try {
+            // 首先检查是否有标注数据
+            if (!VFB.annotations || VFB.annotations.length === 0) {
+                showToast('No annotations to export / 没有标注可导出', 'warning');
+                return;
+            }
+
+            const result = await apiRequest('/export', { page_url: window.location.href });
+
+            if (result.success && result.markdown) {
+                const success = await copyToClipboard(result.markdown);
+                if (success) {
+                    showToast('Copied to clipboard / 已复制', 'success');
+                } else {
+                    // 如果剪贴板失败，尝试显示内容供用户手动复制
+                    showMarkdownModal(result.markdown);
+                }
+            } else {
+                const errorMsg = result.message || 'Export failed / 导出失败';
+                showToast(errorMsg, 'error');
+                console.error('VFB Export MD Error:', result);
+            }
+        } catch (error) {
+            console.error('VFB Export Error:', error);
+            showToast('Export error / 导出出错', 'error');
+        }
+    }
+
+    // 显示 Markdown 内容的模态框（剪贴板失败时的备用方案）
+    function showMarkdownModal(markdown) {
+        const modalOverlay = document.createElement('div');
+        modalOverlay.className = 'vfb-modal-overlay';
+        modalOverlay.innerHTML = `
+            <div class="vfb-modal" style="max-width: 600px;">
+                <div class="vfb-modal-header">
+                    <div class="vfb-modal-title">📋 Markdown Content</div>
+                    <button class="vfb-modal-close">&times;</button>
+                </div>
+                <div class="vfb-modal-body">
+                    <p style="margin-bottom:8px;color:#666;font-size:12px;">
+                        Clipboard access denied. Please copy manually:<br>
+                        剪贴板访问被拒绝，请手动复制：
+                    </p>
+                    <textarea class="vfb-md-textarea" readonly style="width:100%;height:300px;font-family:monospace;font-size:12px;padding:10px;border:1px solid #ddd;border-radius:4px;resize:vertical;">${markdown.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
+                </div>
+                <div class="vfb-modal-footer">
+                    <button class="vfb-btn vfb-btn-primary vfb-copy-btn">Select All & Copy</button>
+                    <button class="vfb-btn vfb-close-btn">Close</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modalOverlay);
+
+        const textarea = modalOverlay.querySelector('.vfb-md-textarea');
+        const copyBtn = modalOverlay.querySelector('.vfb-copy-btn');
+        const closeBtn = modalOverlay.querySelector('.vfb-close-btn');
+        const closeX = modalOverlay.querySelector('.vfb-modal-close');
+
+        copyBtn.addEventListener('click', () => {
+            textarea.select();
+            document.execCommand('copy');
+            showToast('Copied / 已复制', 'success');
+            modalOverlay.remove();
+        });
+
+        closeBtn.addEventListener('click', () => modalOverlay.remove());
+        closeX.addEventListener('click', () => modalOverlay.remove());
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) modalOverlay.remove();
+        });
+
+        // 自动选中文本
+        setTimeout(() => textarea.select(), 100);
+    }
+
+    async function uploadScreenshot(imageData, annotationId) {
+        const result = await apiRequest('/screenshots', {
+            image_data: imageData,
+            annotation_id: annotationId
+        }, 'POST');
+        return result;
+    }
+
+    // ========================================
+    // Developer Mode Functions - 开发者模式函数
+    // ========================================
+
+    /**
+     * Toggle developer mode.
+     * In WP version, dev mode is based on capability — no password needed.
+     */
+    function toggleDevMode() {
+        if (!cfg.isAdmin) {
+            showToast('Admin access required', 'error');
+            return;
+        }
+
+        if (VFB.isDevMode) {
+            exitDevMode();
+        } else {
+            enterDevMode();
+        }
+    }
+
+    /**
+     * Enter developer mode
+     */
+    function enterDevMode() {
+        VFB.isDevMode = true;
+
+        // Update UI
+        const devBtn = document.getElementById('vfb-dev');
+        if (devBtn) {
+            devBtn.classList.add('active');
+            devBtn.setAttribute('data-tooltip', 'Exit Dev Mode');
+        }
+
+        // Add dev mode indicator to toolbar
+        const toolbar = VFB.elements.toolbar;
+        if (toolbar) {
+            toolbar.classList.add('vfb-dev-mode');
+        }
+
+        // Reload annotations (will load all from all sessions)
+        loadAnnotations();
+
+        showToast('Developer Mode ON', 'success');
+    }
+
+    /**
+     * Exit developer mode
+     */
+    function exitDevMode() {
+        VFB.isDevMode = false;
+
+        // Update UI
+        const devBtn = document.getElementById('vfb-dev');
+        if (devBtn) {
+            devBtn.classList.remove('active');
+            devBtn.setAttribute('data-tooltip', 'Dev Mode');
+        }
+
+        // Remove dev mode indicator
+        const toolbar = VFB.elements.toolbar;
+        if (toolbar) {
+            toolbar.classList.remove('vfb-dev-mode');
+        }
+
+        // Reload annotations (will load only current session)
+        loadAnnotations();
+
+        showToast('Developer Mode OFF', 'default');
+    }
+
+    /**
+     * Update annotation status (dev mode)
+     */
+    async function updateAnnotationStatus(ann, newStatus) {
+        if (!VFB.isDevMode) return false;
+
+        const dbId = ann._db_id || ann.id;
+        const result = await apiRequest('/annotations/' + dbId, { status: newStatus }, 'PATCH');
+
+        if (result.success) {
+            ann.status = newStatus;
+            showToast('Status updated', 'success');
+            renderAnnotationList();
+            return true;
+        } else {
+            showToast('Update failed', 'error');
+            return false;
+        }
+    }
+
+    async function addDevResponse(ann, response) {
+        if (!VFB.isDevMode) return false;
+
+        const dbId = ann._db_id || ann.id;
+        const result = await apiRequest('/annotations/' + dbId, { developer_response: response }, 'PATCH');
+
+        if (result.success) {
+            ann.developer_response = response;
+            ann.responded_at = new Date().toISOString();
+            showToast('Response saved', 'success');
+            return true;
+        } else {
+            showToast('Save failed', 'error');
+            return false;
+        }
+    }
+
+    // ========================================
+    // UI Functions - 界面函数
+    // ========================================
+
+    /**
+     * Create toolbar HTML
+     */
+    function createToolbar() {
+        const toolbar = document.createElement('div');
+        toolbar.className = 'vfb-toolbar';
+        toolbar.innerHTML = `
+            <div class="vfb-toolbar-collapsed" id="vfb-toggle">
+                ${Icons.pin}
+            </div>
+            <div class="vfb-toolbar-expanded" style="display: none;">
+                <button class="vfb-tool-btn" data-tool="element" data-tooltip="Element">
+                    ${Icons.element}
+                </button>
+                <button class="vfb-tool-btn" data-tool="text" data-tooltip="Text">
+                    ${Icons.text}
+                </button>
+                <button class="vfb-tool-btn" data-tool="screenshot" data-tooltip="Screenshot">
+                    ${Icons.screenshot}
+                </button>
+                <div class="vfb-divider"></div>
+                <button class="vfb-tool-btn" id="vfb-list" data-tooltip="List">
+                    ${Icons.list}
+                    <span class="vfb-list-count"></span>
+                </button>
+                <button class="vfb-tool-btn" id="vfb-copy" data-tooltip="Copy MD">
+                    ${Icons.copy}
+                </button>
+                ${cfg.isAdmin ? `<button class="vfb-tool-btn" id="vfb-dev" data-tooltip="Dev Mode">
+                    ${Icons.dev}
+                </button>` : ''}
+                <div class="vfb-divider"></div>
+                <button class="vfb-tool-btn vfb-btn-close" id="vfb-collapse" data-tooltip="Close">
+                    ${Icons.close}
+                </button>
+            </div>
+            <div class="vfb-list-panel" id="vfb-list-panel" style="display: none;"></div>
+        `;
+
+        document.body.appendChild(toolbar);
+        VFB.elements.toolbar = toolbar;
+
+        // Bind events
+        toolbar.querySelector('#vfb-toggle').addEventListener('click', expandToolbar);
+        toolbar.querySelector('#vfb-collapse').addEventListener('click', collapseToolbar);
+        toolbar.querySelector('#vfb-copy').addEventListener('click', exportMarkdown);
+        toolbar.querySelector('#vfb-list').addEventListener('click', toggleListPanel);
+        const devBtn = toolbar.querySelector('#vfb-dev');
+        if (devBtn) devBtn.addEventListener('click', toggleDevMode);
+
+        // Tool buttons
+        toolbar.querySelectorAll('.vfb-tool-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tool = btn.dataset.tool;
+                if (VFB.currentTool === tool) {
+                    deactivateTool();
+                } else {
+                    activateTool(tool);
+                }
+            });
+        });
+
+        // Draggable removed - horizontal toolbar doesn't need it
+    }
+
+    /**
+     * Expand toolbar
+     */
+    function expandToolbar() {
+        const toolbar = VFB.elements.toolbar;
+        toolbar.querySelector('.vfb-toolbar-collapsed').style.display = 'none';
+        toolbar.querySelector('.vfb-toolbar-expanded').style.display = 'flex';
+    }
+
+    /**
+     * Collapse toolbar
+     */
+    function collapseToolbar() {
+        const toolbar = VFB.elements.toolbar;
+        toolbar.querySelector('.vfb-toolbar-expanded').style.display = 'none';
+        toolbar.querySelector('.vfb-toolbar-collapsed').style.display = 'flex';
+        // Close list panel
+        const panel = document.getElementById('vfb-list-panel');
+        if (panel) panel.style.display = 'none';
+        const listBtn = document.getElementById('vfb-list');
+        if (listBtn) listBtn.classList.remove('active');
+        deactivateTool();
+    }
+
+    /**
+     * Make element draggable
+     */
+    function makeDraggable(element, handle) {
+        let isDragging = false;
+        let startX, startY, initialX, initialY;
+
+        handle.addEventListener('mousedown', (e) => {
+            if (e.target.tagName === 'BUTTON') return;
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            const rect = element.getBoundingClientRect();
+            initialX = rect.left;
+            initialY = rect.top;
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            element.style.left = (initialX + dx) + 'px';
+            element.style.top = (initialY + dy) + 'px';
+            element.style.right = 'auto';
+            element.style.bottom = 'auto';
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+    }
+
+    /**
+     * Render annotation list (updates markers and list panel if open)
+     */
+    function renderAnnotationList() {
+        renderPageMarkers();
+
+        // Also refresh list panel if it's currently open
+        const listPanel = document.getElementById('vfb-list-panel');
+        if (listPanel && listPanel.style.display !== 'none') {
+            renderListPanel();
+        }
+    }
+
+    /**
+     * Check if element is visible (not hidden by collapse/accordion/display:none)
+     */
+    function isElementVisible(el) {
+        if (!el) return false;
+
+        // Check if element or any parent is hidden
+        let current = el;
+        while (current && current !== document.body) {
+            const style = window.getComputedStyle(current);
+            if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
+                return false;
+            }
+            // Check for collapsed Bootstrap elements
+            if (current.classList.contains('collapse') && !current.classList.contains('show')) {
+                return false;
+            }
+            // Check for accordion items
+            if (current.classList.contains('accordion-collapse') && !current.classList.contains('show')) {
+                return false;
+            }
+            current = current.parentElement;
+        }
+
+        // Check if element has zero dimensions
+        const rect = el.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Render page markers
+     * Uses a marker cache to avoid flickering during scroll
+     */
+    function renderPageMarkers() {
+        // Get existing markers map
+        const existingMarkers = {};
+        document.querySelectorAll('.vfb-marker').forEach(m => {
+            existingMarkers[m.dataset.id] = m;
+        });
+
+        const usedIds = new Set();
+
+        VFB.annotations.forEach((ann, index) => {
+            if (ann.type === 'screenshot') {
+                return; // No marker for screenshots
+            }
+
+            let targetEl = null;
+            if (ann.selector) {
+                try {
+                    targetEl = document.querySelector(ann.selector);
+                } catch (e) {
+                    // Invalid selector
+                }
+            }
+
+            if (targetEl && isElementVisible(targetEl)) {
+                const rect = targetEl.getBoundingClientRect();
+                const left = rect.right + window.scrollX - 12;
+                const top = rect.top + window.scrollY - 12;
+
+                usedIds.add(ann.id);
+
+                // Check if marker already exists
+                let marker = existingMarkers[ann.id];
+                if (marker) {
+                    // Update position only
+                    marker.style.left = left + 'px';
+                    marker.style.top = top + 'px';
+                    marker.textContent = index + 1;
+                    marker.dataset.index = index;
+                } else {
+                    // Create new marker
+                    marker = document.createElement('div');
+                    marker.className = 'vfb-marker ' + ann.type;
+                    marker.textContent = index + 1;
+                    marker.style.position = 'absolute';
+                    marker.style.left = left + 'px';
+                    marker.style.top = top + 'px';
+                    marker.title = ann.comment || '';
+                    marker.dataset.id = ann.id;
+                    marker.dataset.index = index;
+
+                    // Click to show detail dialog
+                    marker.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const annIndex = parseInt(marker.dataset.index, 10);
+                        const annData = VFB.annotations.find(a => a.id === ann.id);
+                        if (annData) {
+                            showAnnotationDetail(annData, annIndex);
+                        }
+                    });
+
+                    document.body.appendChild(marker);
+                }
+            } else {
+                // Element not visible, mark for potential removal
+            }
+        });
+
+        // Remove markers for annotations that no longer have visible elements
+        Object.keys(existingMarkers).forEach(id => {
+            if (!usedIds.has(id)) {
+                existingMarkers[id].remove();
+            }
+        });
+
+        // Update badge count on collapsed button and list button
+        updateBadgeCount();
+        updateListCount();
+    }
+
+    /**
+     * Update badge count on collapsed toolbar
+     */
+    function updateBadgeCount() {
+        const toggle = document.getElementById('vfb-toggle');
+        if (!toggle) return;
+
+        let badge = toggle.querySelector('.vfb-badge');
+        const count = VFB.annotations.length;
+
+        if (count > 0) {
+            if (!badge) {
+                badge = document.createElement('span');
+                badge.className = 'vfb-badge';
+                toggle.appendChild(badge);
+            }
+            badge.textContent = count;
+        } else if (badge) {
+            badge.remove();
+        }
+    }
+
+    // ========================================
+    // Tool Functions - 工具函数
+    // ========================================
+
+    /**
+     * Activate tool
+     */
+    function activateTool(tool) {
+        deactivateTool();
+        VFB.currentTool = tool;
+        VFB.isActive = true;
+
+        // Update UI
+        const toolbar = VFB.elements.toolbar;
+        toolbar.querySelectorAll('.vfb-tool-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.tool === tool);
+        });
+
+        if (tool === 'element') {
+            createOverlay();
+            document.addEventListener('mousemove', handleElementHover);
+            document.addEventListener('click', handleElementClick, true);
+        } else if (tool === 'text') {
+            document.addEventListener('mouseup', handleTextSelection);
+            showToast('Select text to annotate', 'default');
+        } else if (tool === 'screenshot') {
+            captureScreenshot();
+        }
+    }
+
+    /**
+     * Deactivate current tool
+     */
+    function deactivateTool() {
+        VFB.currentTool = null;
+        VFB.isActive = false;
+
+        // Update UI
+        const toolbar = VFB.elements.toolbar;
+        if (toolbar) {
+            toolbar.querySelectorAll('.vfb-tool-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+        }
+
+        // Remove overlay
+        removeOverlay();
+
+        // Remove event listeners
+        document.removeEventListener('mousemove', handleElementHover);
+        document.removeEventListener('click', handleElementClick, true);
+        document.removeEventListener('mouseup', handleTextSelection);
+    }
+
+    /**
+     * Create overlay for element selection
+     */
+    function createOverlay() {
+        const overlay = document.createElement('div');
+        overlay.className = 'vfb-overlay';
+        overlay.id = 'vfb-overlay';
+        document.body.appendChild(overlay);
+        VFB.elements.overlay = overlay;
+
+        const highlight = document.createElement('div');
+        highlight.className = 'vfb-highlight';
+        highlight.id = 'vfb-highlight';
+        highlight.innerHTML = '<div class="vfb-highlight-label"></div>';
+        highlight.style.display = 'none';
+        document.body.appendChild(highlight);
+        VFB.elements.highlight = highlight;
+    }
+
+    /**
+     * Remove overlay
+     */
+    function removeOverlay() {
+        if (VFB.elements.overlay) {
+            VFB.elements.overlay.remove();
+            VFB.elements.overlay = null;
+        }
+        if (VFB.elements.highlight) {
+            VFB.elements.highlight.remove();
+            VFB.elements.highlight = null;
+        }
+    }
+
+    /**
+     * Handle element hover
+     */
+    function handleElementHover(e) {
+        if (!VFB.isActive || VFB.currentTool !== 'element') return;
+
+        const overlay = VFB.elements.overlay;
+        const highlight = VFB.elements.highlight;
+        if (!overlay || !highlight) return;
+
+        // Get element under cursor (through overlay)
+        overlay.style.pointerEvents = 'none';
+        const el = document.elementFromPoint(e.clientX, e.clientY);
+        overlay.style.pointerEvents = 'auto';
+
+        if (!el || el.closest('.vfb-toolbar') || el.closest('.vfb-highlight')) {
+            highlight.style.display = 'none';
+            return;
+        }
+
+        const rect = el.getBoundingClientRect();
+        highlight.style.display = 'block';
+        highlight.style.left = (rect.left + window.scrollX) + 'px';
+        highlight.style.top = (rect.top + window.scrollY) + 'px';
+        highlight.style.width = rect.width + 'px';
+        highlight.style.height = rect.height + 'px';
+
+        const label = highlight.querySelector('.vfb-highlight-label');
+        label.textContent = el.tagName.toLowerCase() + (el.className ? '.' + el.className.split(' ')[0] : '');
+    }
+
+    /**
+     * Handle element click
+     */
+    function handleElementClick(e) {
+        if (!VFB.isActive || VFB.currentTool !== 'element') return;
+
+        const overlay = VFB.elements.overlay;
+        if (!overlay) return;
+
+        // Get element under cursor
+        overlay.style.pointerEvents = 'none';
+        const el = document.elementFromPoint(e.clientX, e.clientY);
+        overlay.style.pointerEvents = 'auto';
+
+        if (!el || el.closest('.vfb-toolbar') || el.closest('.vfb-modal-overlay')) {
+            return;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const selector = getSelector(el);
+        const elementText = getElementText(el);
+        const elRect = el.getBoundingClientRect();
+
+        showCommentModal({
+            type: 'element',
+            selector: selector,
+            element_text: elementText,
+            element_position: {
+                rect: { top: Math.round(elRect.top + window.scrollY), left: Math.round(elRect.left + window.scrollX), width: Math.round(elRect.width), height: Math.round(elRect.height) },
+                scrollX: Math.round(window.scrollX),
+                scrollY: Math.round(window.scrollY),
+                viewportWidth: window.innerWidth,
+                viewportHeight: window.innerHeight,
+                pageWidth: document.documentElement.scrollWidth,
+                pageHeight: document.documentElement.scrollHeight
+            },
+            info: `<code>${selector}</code><br>Text: "${elementText}"`
+        });
+    }
+
+    /**
+     * Handle text selection
+     */
+    function handleTextSelection(e) {
+        if (!VFB.isActive || VFB.currentTool !== 'text') return;
+        if (e.target.closest('.vfb-toolbar') || e.target.closest('.vfb-modal-overlay')) return;
+
+        const selection = window.getSelection();
+        const selectedText = selection.toString().trim();
+
+        if (!selectedText) return;
+
+        // Get context
+        const range = selection.getRangeAt(0);
+        const container = range.commonAncestorContainer;
+        const fullText = container.textContent || '';
+        const startIndex = Math.max(0, fullText.indexOf(selectedText) - 20);
+        const endIndex = Math.min(fullText.length, fullText.indexOf(selectedText) + selectedText.length + 20);
+        const context = '...' + fullText.substring(startIndex, endIndex) + '...';
+
+        const rangeRect = range.getBoundingClientRect();
+        showCommentModal({
+            type: 'text',
+            selected_text: selectedText,
+            context: context,
+            selector: getSelector(container.parentElement || container),
+            element_position: {
+                rect: { top: Math.round(rangeRect.top + window.scrollY), left: Math.round(rangeRect.left + window.scrollX), width: Math.round(rangeRect.width), height: Math.round(rangeRect.height) },
+                scrollX: Math.round(window.scrollX),
+                scrollY: Math.round(window.scrollY),
+                viewportWidth: window.innerWidth,
+                viewportHeight: window.innerHeight,
+                pageWidth: document.documentElement.scrollWidth,
+                pageHeight: document.documentElement.scrollHeight
+            },
+            info: `Selected: "<strong>${selectedText}</strong>"<br>Context: "${context}"`
+        });
+    }
+
+    /**
+     * Capture screenshot with region selection
+     */
+    function captureScreenshot() {
+        if (typeof html2canvas === 'undefined') {
+            showToast('html2canvas not loaded', 'error');
+            deactivateTool();
+            return;
+        }
+
+        // Show region selection overlay
+        showRegionSelector();
+    }
+
+    /**
+     * Show region selector overlay
+     */
+    function showRegionSelector() {
+        const toolbar = VFB.elements.toolbar;
+        toolbar.style.display = 'none';
+
+        const overlay = document.createElement('div');
+        overlay.className = 'vfb-region-overlay';
+        overlay.id = 'vfb-region-overlay';
+        overlay.innerHTML = `
+            <div class="vfb-region-hint">Drag to select capture area / ESC to cancel</div>
+            <div class="vfb-region-box" id="vfb-region-box"></div>
+        `;
+        document.body.appendChild(overlay);
+
+        const box = document.getElementById('vfb-region-box');
+        let isDrawing = false;
+        let startX = 0, startY = 0;
+
+        const handleMouseDown = (e) => {
+            isDrawing = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            box.style.left = startX + 'px';
+            box.style.top = startY + 'px';
+            box.style.width = '0';
+            box.style.height = '0';
+            box.style.display = 'block';
+        };
+
+        const handleMouseMove = (e) => {
+            if (!isDrawing) return;
+            const currentX = e.clientX;
+            const currentY = e.clientY;
+            const left = Math.min(startX, currentX);
+            const top = Math.min(startY, currentY);
+            const width = Math.abs(currentX - startX);
+            const height = Math.abs(currentY - startY);
+            box.style.left = left + 'px';
+            box.style.top = top + 'px';
+            box.style.width = width + 'px';
+            box.style.height = height + 'px';
+        };
+
+        const handleMouseUp = (e) => {
+            if (!isDrawing) return;
+            isDrawing = false;
+
+            const rect = box.getBoundingClientRect();
+            if (rect.width < 20 || rect.height < 20) {
+                // Too small, cancel
+                closeRegionSelector();
+                toolbar.style.display = 'flex';
+                deactivateTool();
+                return;
+            }
+
+            // Capture the selected region
+            captureRegion(rect);
+        };
+
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                closeRegionSelector();
+                toolbar.style.display = 'flex';
+                deactivateTool();
+            }
+        };
+
+        const closeRegionSelector = () => {
+            overlay.remove();
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+
+        overlay.addEventListener('mousedown', handleMouseDown);
+        overlay.addEventListener('mousemove', handleMouseMove);
+        overlay.addEventListener('mouseup', handleMouseUp);
+        document.addEventListener('keydown', handleKeyDown);
+
+        VFB.closeRegionSelector = closeRegionSelector;
+    }
+
+    /**
+     * Capture selected region (WYSIWYG approach)
+     * Step 1: Capture entire visible viewport
+     * Step 2: Crop to selected region
+     */
+    function captureRegion(rect) {
+        const toolbar = VFB.elements.toolbar;
+
+        // Store rect values before closing overlay (viewport coordinates)
+        const cropX = rect.left;
+        const cropY = rect.top;
+        const cropWidth = rect.width;
+        const cropHeight = rect.height;
+
+        // Close region selector first
+        if (VFB.closeRegionSelector) {
+            VFB.closeRegionSelector();
+        }
+
+        showToast('Capturing...', 'default');
+
+        // Wait for overlay to be removed, then capture
+        setTimeout(() => {
+            // Get device pixel ratio for high DPI screens
+            const scale = window.devicePixelRatio || 1;
+
+            // Capture the entire visible viewport
+            html2canvas(document.documentElement, {
+                useCORS: true,
+                allowTaint: true,
+                logging: false,
+                scale: scale,   // Handle high DPI screens
+                // Capture only the visible viewport
+                scrollX: -window.scrollX,
+                scrollY: -window.scrollY,
+                windowWidth: window.innerWidth,
+                windowHeight: window.innerHeight,
+                width: window.innerWidth,
+                height: window.innerHeight,
+                x: 0,
+                y: 0,
+                // Ignore VFB elements
+                ignoreElements: (element) => {
+                    return element.classList && (
+                        element.classList.contains('vfb-toolbar') ||
+                        element.classList.contains('vfb-toast') ||
+                        element.classList.contains('vfb-marker')
+                    );
+                }
+            }).then(fullCanvas => {
+                // Step 2: Crop to selected region (account for scale)
+                const croppedCanvas = document.createElement('canvas');
+                croppedCanvas.width = cropWidth * scale;
+                croppedCanvas.height = cropHeight * scale;
+                const ctx = croppedCanvas.getContext('2d');
+
+                // Draw the cropped region (scale coordinates)
+                ctx.drawImage(
+                    fullCanvas,
+                    cropX * scale, cropY * scale, cropWidth * scale, cropHeight * scale,
+                    0, 0, cropWidth * scale, cropHeight * scale
+                );
+
+                toolbar.style.display = 'flex';
+                openScreenshotEditor(croppedCanvas);
+            }).catch(err => {
+                toolbar.style.display = 'flex';
+                showToast('Screenshot failed', 'error');
+                console.error('VFB Screenshot error:', err);
+                deactivateTool();
+            });
+        }, 150);
+    }
+
+    /**
+     * Open screenshot editor
+     */
+    function openScreenshotEditor(canvas) {
+        // Call the screenshot module
+        if (typeof VFBScreenshot !== 'undefined') {
+            VFBScreenshot.open(canvas, (imageData) => {
+                // Got edited image, show comment modal
+                showCommentModal({
+                    type: 'screenshot',
+                    screenshot_data: imageData,
+                    element_position: {
+                        rect: { top: 0, left: 0, width: canvas.width, height: canvas.height },
+                        scrollX: Math.round(window.scrollX),
+                        scrollY: Math.round(window.scrollY),
+                        viewportWidth: window.innerWidth,
+                        viewportHeight: window.innerHeight,
+                        pageWidth: document.documentElement.scrollWidth,
+                        pageHeight: document.documentElement.scrollHeight
+                    },
+                    info: '<img src="' + imageData + '" style="max-width:100%;max-height:120px;border-radius:4px;">'
+                });
+            }, () => {
+                // Cancelled
+                deactivateTool();
+            });
+        } else {
+            showToast('Screenshot module not loaded', 'error');
+            deactivateTool();
+        }
+    }
+
+    // ========================================
+    // Modal Functions - 弹窗函数
+    // ========================================
+
+    /**
+     * Show comment modal
+     */
+    function showCommentModal(data) {
+        const modalOverlay = document.createElement('div');
+        modalOverlay.className = 'vfb-modal-overlay';
+        modalOverlay.innerHTML = `
+            <div class="vfb-modal">
+                <div class="vfb-modal-header">
+                    <div class="vfb-modal-title">Add Comment</div>
+                    <button class="vfb-modal-close">&times;</button>
+                </div>
+                <div class="vfb-modal-body">
+                    <div class="vfb-modal-info">${data.info || ''}</div>
+                    <textarea class="vfb-textarea" placeholder="Enter your comment..."></textarea>
+                </div>
+                <div class="vfb-modal-footer">
+                    <button class="vfb-btn vfb-btn-secondary vfb-modal-cancel">Cancel</button>
+                    <button class="vfb-btn vfb-btn-primary vfb-modal-confirm">Add</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modalOverlay);
+
+        const textarea = modalOverlay.querySelector('.vfb-textarea');
+        textarea.focus();
+
+        // Close modal
+        const closeModal = () => {
+            modalOverlay.remove();
+            deactivateTool();
+        };
+
+        modalOverlay.querySelector('.vfb-modal-close').addEventListener('click', closeModal);
+        modalOverlay.querySelector('.vfb-modal-cancel').addEventListener('click', closeModal);
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) closeModal();
+        });
+
+        // Confirm
+        modalOverlay.querySelector('.vfb-modal-confirm').addEventListener('click', async () => {
+            const comment = textarea.value.trim();
+
+            const annotation = {
+                id: generateId(),
+                type: data.type,
+                comment: comment,
+                timestamp: new Date().toISOString()
+            };
+
+            // Attach element position if captured
+            if (data.element_position) {
+                annotation.element_position = data.element_position;
+            }
+
+            if (data.type === 'element') {
+                annotation.selector = data.selector;
+                annotation.element_text = data.element_text;
+            } else if (data.type === 'text') {
+                annotation.selected_text = data.selected_text;
+                annotation.context = data.context;
+                annotation.selector = data.selector;
+            } else if (data.type === 'screenshot') {
+                // Upload screenshot
+                const result = await uploadScreenshot(data.screenshot_data, annotation.id);
+                if (result.success) {
+                    annotation.screenshot_path = result.relative_path;
+                    annotation.screenshot_url = result.access_url;
+                } else {
+                    showToast('Screenshot upload failed', 'error');
+                    closeModal();
+                    return;
+                }
+            }
+
+            VFB.annotations.push(annotation);
+            renderAnnotationList();
+            renderPageMarkers();
+            closeModal();
+
+            // Save individual annotation to DB
+            saveAnnotation(annotation, true).then(result => {
+                if (result.success) {
+                    showToast(VFB.i18n.saved || 'Saved', 'success');
+                } else {
+                    showToast(VFB.i18n.error || 'Save failed', 'error');
+                }
+            });
+        });
+    }
+
+    // ========================================
+    // Annotation Detail Dialog - 标注详情对话框
+    // ========================================
+
+    /**
+     * Show annotation detail dialog
+     */
+    function showAnnotationDetail(ann, index) {
+        let infoHtml = '';
+        if (ann.type === 'element') {
+            infoHtml = `
+                <div class="vfb-detail-type"><strong>Type:</strong> Element</div>
+                <div class="vfb-detail-text"><strong>Text:</strong> "${ann.element_text || ''}"</div>
+                <div class="vfb-detail-selector"><strong>Selector:</strong> <code>${ann.selector || ''}</code></div>
+            `;
+        } else if (ann.type === 'text') {
+            infoHtml = `
+                <div class="vfb-detail-type"><strong>Type:</strong> Text Selection</div>
+                <div class="vfb-detail-text"><strong>Selected:</strong> "${ann.selected_text || ''}"</div>
+                <div class="vfb-detail-context"><strong>Context:</strong> ${ann.context || ''}</div>
+            `;
+        } else if (ann.type === 'screenshot') {
+            infoHtml = `
+                <div class="vfb-detail-type"><strong>Type:</strong> Screenshot</div>
+                <div class="vfb-detail-image">
+                    <img src="${ann.screenshot_url || ''}" class="vfb-detail-img-thumb" style="max-width:100%;max-height:200px;border-radius:4px;cursor:zoom-in;" title="Click to enlarge">
+                </div>
+            `;
+        }
+
+        // Show locate button only for element/text types
+        const showLocateBtn = ann.type === 'element' || ann.type === 'text';
+
+        // Status badge
+        const status = ann.status || 'pending';
+        const statusLabels = { pending: 'Pending', in_progress: 'In Progress', resolved: 'Resolved' };
+        const statusHtml = `<span class="vfb-status-badge vfb-status-${status}">${statusLabels[status] || status}</span>`;
+
+        // Developer response (view mode)
+        const responseViewHtml = ann.developer_response ? `
+            <div class="vfb-dev-response">
+                <strong><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px;margin-right:4px;"><path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>Developer Response:</strong>
+                <div style="margin-top:6px;padding:8px;background:#e8f5e9;border-radius:4px;border-left:3px solid #28a745;">
+                    ${ann.developer_response}
+                </div>
+                ${ann.responded_at ? `<small style="color:#999;">Responded: ${new Date(ann.responded_at).toLocaleString()}</small>` : ''}
+            </div>
+        ` : '';
+
+        // Dev mode controls (edit mode)
+        const devControlsHtml = VFB.isDevMode ? `
+            <div class="vfb-dev-controls" style="margin-top:12px;padding-top:12px;border-top:2px solid #667eea;">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                    <strong style="font-size:12px;color:#667eea;">${Icons.dev} Dev Controls</strong>
+                    ${ann._session_id ? `<small style="color:#999;">Session: ${ann._session_id.substring(0, 8)}...</small>` : ''}
+                </div>
+                <div style="margin-bottom:10px;">
+                    <label style="font-size:12px;font-weight:500;">Status:</label>
+                    <select class="vfb-dev-status" style="margin-left:8px;padding:4px 8px;border:1px solid #ddd;border-radius:4px;font-size:12px;">
+                        <option value="pending" ${status === 'pending' ? 'selected' : ''}>Pending</option>
+                        <option value="in_progress" ${status === 'in_progress' ? 'selected' : ''}>In Progress</option>
+                        <option value="resolved" ${status === 'resolved' ? 'selected' : ''}>Resolved</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size:12px;font-weight:500;display:block;margin-bottom:4px;">Response:</label>
+                    <textarea class="vfb-dev-response-input" style="width:100%;min-height:60px;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:12px;resize:vertical;" placeholder="Enter developer response...">${ann.developer_response || ''}</textarea>
+                    <button class="vfb-btn vfb-btn-primary vfb-dev-save-response" style="margin-top:6px;padding:4px 12px;font-size:12px;">Save Response</button>
+                </div>
+            </div>
+        ` : responseViewHtml;
+
+        const modalOverlay = document.createElement('div');
+        modalOverlay.className = 'vfb-modal-overlay';
+        modalOverlay.innerHTML = `
+            <div class="vfb-modal" style="${VFB.isDevMode ? 'width:420px;' : ''}">
+                <div class="vfb-modal-header">
+                    <div class="vfb-modal-title">Annotation #${index + 1} ${statusHtml}</div>
+                    <button class="vfb-modal-close">&times;</button>
+                </div>
+                <div class="vfb-modal-body">
+                    <div class="vfb-modal-info">
+                        ${infoHtml}
+                    </div>
+                    <div class="vfb-detail-comment">
+                        <strong>User Comment:</strong><br>
+                        <div style="margin-top:6px;padding:8px;background:#f8f9fa;border-radius:4px;min-height:40px;">
+                            ${ann.comment || '<em style="color:#999;">No comment</em>'}
+                        </div>
+                    </div>
+                    ${devControlsHtml}
+                    <div class="vfb-detail-time" style="margin-top:10px;font-size:11px;color:#999;">
+                        Created: ${new Date(ann.timestamp).toLocaleString()}
+                    </div>
+                </div>
+                <div class="vfb-modal-footer">
+                    <button class="vfb-btn vfb-btn-danger vfb-detail-delete">
+                        ${Icons.delete} Delete
+                    </button>
+                    ${showLocateBtn ? `<button class="vfb-btn vfb-btn-info vfb-detail-locate">${Icons.locate} Locate</button>` : ''}
+                    <button class="vfb-btn vfb-btn-secondary vfb-modal-close-btn">Close</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modalOverlay);
+
+        // Close modal
+        const closeModal = () => modalOverlay.remove();
+
+        modalOverlay.querySelector('.vfb-modal-close').addEventListener('click', closeModal);
+        modalOverlay.querySelector('.vfb-modal-close-btn').addEventListener('click', closeModal);
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) closeModal();
+        });
+
+        // Delete button
+        modalOverlay.querySelector('.vfb-detail-delete').addEventListener('click', () => {
+            if (confirm('Delete this annotation?')) {
+                deleteAnnotation(ann.id);
+                closeModal();
+            }
+        });
+
+        // Locate button
+        const locateBtn = modalOverlay.querySelector('.vfb-detail-locate');
+        if (locateBtn) {
+            locateBtn.addEventListener('click', () => {
+                closeModal();
+                scrollToAnnotation(ann);
+            });
+        }
+
+        // Image zoom (for screenshot type)
+        const thumbImg = modalOverlay.querySelector('.vfb-detail-img-thumb');
+        if (thumbImg) {
+            thumbImg.addEventListener('click', () => {
+                openImageLightbox(thumbImg.src);
+            });
+        }
+
+        // Dev mode controls
+        if (VFB.isDevMode) {
+            // Status change
+            const statusSelect = modalOverlay.querySelector('.vfb-dev-status');
+            if (statusSelect) {
+                statusSelect.addEventListener('change', async () => {
+                    const newStatus = statusSelect.value;
+                    const success = await updateAnnotationStatus(ann, newStatus);
+                    if (success) {
+                        // Update status badge in header
+                        const badge = modalOverlay.querySelector('.vfb-status-badge');
+                        if (badge) {
+                            badge.className = `vfb-status-badge vfb-status-${newStatus}`;
+                            badge.textContent = {pending: 'Pending', in_progress: 'In Progress', resolved: 'Resolved'}[newStatus];
+                        }
+                    }
+                });
+            }
+
+            // Save response
+            const saveResponseBtn = modalOverlay.querySelector('.vfb-dev-save-response');
+            if (saveResponseBtn) {
+                saveResponseBtn.addEventListener('click', async () => {
+                    const responseInput = modalOverlay.querySelector('.vfb-dev-response-input');
+                    const response = responseInput.value.trim();
+                    await addDevResponse(ann, response);
+                });
+            }
+        }
+    }
+
+    /**
+     * Open image lightbox for full-size viewing
+     */
+    function openImageLightbox(src) {
+        const lightbox = document.createElement('div');
+        lightbox.className = 'vfb-lightbox';
+        lightbox.innerHTML = `
+            <div class="vfb-lightbox-content">
+                <img src="${src}" class="vfb-lightbox-img">
+                <button class="vfb-lightbox-close">&times;</button>
+                <div class="vfb-lightbox-hint">Click anywhere or press ESC to close</div>
+            </div>
+        `;
+        document.body.appendChild(lightbox);
+
+        const closeLightbox = () => lightbox.remove();
+
+        lightbox.addEventListener('click', closeLightbox);
+        lightbox.querySelector('.vfb-lightbox-close').addEventListener('click', closeLightbox);
+
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                closeLightbox();
+                document.removeEventListener('keydown', handleKeyDown);
+            }
+        };
+        document.addEventListener('keydown', handleKeyDown);
+    }
+
+    /**
+     * Scroll to annotation element and highlight it
+     */
+    function scrollToAnnotation(ann) {
+        if (!ann.selector) {
+            showToast('Cannot locate: no selector', 'error');
+            return;
+        }
+
+        let targetEl = null;
+        try {
+            targetEl = document.querySelector(ann.selector);
+        } catch (e) {
+            showToast('Cannot locate: invalid selector', 'error');
+            return;
+        }
+
+        if (!targetEl) {
+            showToast('Element not found on page', 'error');
+            return;
+        }
+
+        // Handle any Bootstrap collapse/accordion parents
+        expandBootstrapCollapse(targetEl);
+
+        // Wait for collapse/expand animations
+        setTimeout(() => {
+            // Scroll to element
+            targetEl.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            });
+
+            // Show highlight effect after scroll completes
+            setTimeout(() => {
+                targetEl.classList.add('vfb-locate-highlight');
+
+                // Remove highlight after 2 seconds
+                setTimeout(() => {
+                    targetEl.classList.remove('vfb-locate-highlight');
+                }, 2000);
+
+                renderPageMarkers();
+            }, 300);
+        }, 350);
+    }
+
+    /**
+     * Create a visual locate marker on the element
+     */
+    function createLocateMarker(el) {
+        removeLocateMarker();
+
+        const rect = el.getBoundingClientRect();
+
+        // Create pulsing rings marker
+        const marker = document.createElement('div');
+        marker.id = 'vfb-locate-marker';
+        marker.innerHTML = `
+            <div class="vfb-ring vfb-ring-1"></div>
+            <div class="vfb-ring vfb-ring-2"></div>
+            <div class="vfb-ring vfb-ring-3"></div>
+            <div class="vfb-center-dot"></div>
+        `;
+
+        // Inline styles for reliability
+        const size = 60;
+        marker.style.cssText = `
+            position: fixed;
+            left: ${rect.left + rect.width / 2}px;
+            top: ${rect.top + rect.height / 2}px;
+            width: ${size}px;
+            height: ${size}px;
+            transform: translate(-50%, -50%);
+            z-index: 999999;
+            pointer-events: none;
+        `;
+
+        // Add ring styles
+        const ringBase = `
+            position: absolute;
+            border: 3px solid #ff6b35;
+            border-radius: 50%;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+        `;
+
+        marker.querySelector('.vfb-ring-1').style.cssText = ringBase + `
+            width: 20px; height: 20px;
+            animation: vfbRingPulse 1.2s ease-out infinite;
+        `;
+        marker.querySelector('.vfb-ring-2').style.cssText = ringBase + `
+            width: 35px; height: 35px;
+            animation: vfbRingPulse 1.2s ease-out infinite 0.3s;
+        `;
+        marker.querySelector('.vfb-ring-3').style.cssText = ringBase + `
+            width: 50px; height: 50px;
+            animation: vfbRingPulse 1.2s ease-out infinite 0.6s;
+        `;
+        marker.querySelector('.vfb-center-dot').style.cssText = `
+            position: absolute;
+            width: 10px; height: 10px;
+            background: #ff6b35;
+            border-radius: 50%;
+            left: 50%; top: 50%;
+            transform: translate(-50%, -50%);
+        `;
+
+        // Add keyframes animation if not exists
+        if (!document.getElementById('vfb-locate-styles')) {
+            const style = document.createElement('style');
+            style.id = 'vfb-locate-styles';
+            style.textContent = `
+                @keyframes vfbRingPulse {
+                    0% { transform: translate(-50%, -50%) scale(0.8); opacity: 1; }
+                    100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        document.body.appendChild(marker);
+    }
+
+    /**
+     * Remove the locate marker
+     */
+    function removeLocateMarker() {
+        const marker = document.getElementById('vfb-locate-marker');
+        if (marker) marker.remove();
+    }
+
+    /**
+     * Expand Bootstrap collapse/accordion parents only
+     */
+    function expandBootstrapCollapse(el) {
+        let current = el;
+
+        while (current && current !== document.body) {
+            // Bootstrap collapse
+            if (current.classList.contains('collapse') && !current.classList.contains('show')) {
+                if (typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
+                    const bsCollapse = bootstrap.Collapse.getOrCreateInstance(current, { toggle: false });
+                    bsCollapse.show();
+                } else {
+                    current.classList.add('show');
+                }
+            }
+
+            // Bootstrap accordion
+            if (current.classList.contains('accordion-collapse') && !current.classList.contains('show')) {
+                if (typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
+                    const bsCollapse = bootstrap.Collapse.getOrCreateInstance(current, { toggle: false });
+                    bsCollapse.show();
+                } else {
+                    current.classList.add('show');
+                }
+            }
+
+            current = current.parentElement;
+        }
+    }
+
+    // ========================================
+    // List Panel - 列表面板
+    // ========================================
+
+    /**
+     * Toggle list panel
+     */
+    function toggleListPanel() {
+        const panel = document.getElementById('vfb-list-panel');
+        const listBtn = document.getElementById('vfb-list');
+
+        if (panel.style.display === 'none') {
+            renderListPanel();
+            panel.style.display = 'block';
+            listBtn.classList.add('active');
+        } else {
+            panel.style.display = 'none';
+            listBtn.classList.remove('active');
+        }
+    }
+
+    /**
+     * Render list panel content
+     */
+    function renderListPanel() {
+        const panel = document.getElementById('vfb-list-panel');
+        if (!panel) return;
+
+        if (VFB.annotations.length === 0) {
+            panel.innerHTML = '<div class="vfb-list-empty">No annotations yet</div>';
+            return;
+        }
+
+        let html = '<div class="vfb-list-items">';
+        VFB.annotations.forEach((ann, index) => {
+            let typeIcon = Icons.element;
+            let summary = '';
+
+            if (ann.type === 'element') {
+                typeIcon = Icons.element;
+                summary = ann.element_text || ann.selector || '';
+            } else if (ann.type === 'text') {
+                typeIcon = Icons.text;
+                summary = ann.selected_text || '';
+            } else if (ann.type === 'screenshot') {
+                typeIcon = Icons.screenshot;
+                summary = ann.comment || 'Screenshot';
+            }
+
+            // Truncate summary
+            if (summary.length > 30) {
+                summary = summary.substring(0, 30) + '...';
+            }
+
+            // Resolved indicator
+            const resolvedMark = ann.status === 'resolved' ? '<span class="vfb-list-item-resolved" title="Resolved">✓</span>' : '';
+
+            html += `
+                <div class="vfb-list-item ${ann.status === 'resolved' ? 'vfb-list-item-is-resolved' : ''}" data-id="${ann.id}" data-index="${index}">
+                    <span class="vfb-list-item-num">${index + 1}</span>
+                    <span class="vfb-list-item-icon">${typeIcon}</span>
+                    <span class="vfb-list-item-summary">${summary}</span>
+                    <span class="vfb-list-item-comment">${ann.comment ? '💬' : ''}</span>
+                    ${resolvedMark}
+                </div>
+            `;
+        });
+        html += '</div>';
+
+        panel.innerHTML = html;
+
+        // Bind click events to list items
+        panel.querySelectorAll('.vfb-list-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const id = item.dataset.id;
+                const index = parseInt(item.dataset.index, 10);
+                const ann = VFB.annotations.find(a => a.id === id);
+                if (ann) {
+                    // Screenshot: open dialog directly without locate
+                    if (ann.type === 'screenshot') {
+                        showAnnotationDetail(ann, index);
+                        return;
+                    }
+                    // Element/Text: first locate and highlight, then show dialog
+                    scrollToAnnotation(ann);
+                    showLocateLoading();
+                    setTimeout(() => {
+                        hideLocateLoading();
+                        showAnnotationDetail(ann, index);
+                    }, 1500);
+                }
+            });
+        });
+    }
+
+    /**
+     * Show locate loading indicator
+     */
+    function showLocateLoading() {
+        // Remove existing
+        hideLocateLoading();
+
+        const loader = document.createElement('div');
+        loader.id = 'vfb-locate-loading';
+        loader.innerHTML = `
+            <div class="vfb-locate-loading-spinner"></div>
+            <span>Locating...</span>
+        `;
+        document.body.appendChild(loader);
+    }
+
+    /**
+     * Hide locate loading indicator
+     */
+    function hideLocateLoading() {
+        const loader = document.getElementById('vfb-locate-loading');
+        if (loader) loader.remove();
+    }
+
+    /**
+     * Update list button count
+     */
+    function updateListCount() {
+        const countEl = document.querySelector('.vfb-list-count');
+        if (!countEl) return;
+
+        const count = VFB.annotations.length;
+        if (count > 0) {
+            countEl.textContent = count;
+            countEl.style.display = 'flex';
+        } else {
+            countEl.style.display = 'none';
+        }
+    }
+
+    // ========================================
+    // Keyboard Shortcuts - 快捷键
+    // ========================================
+
+    function handleKeyboard(e) {
+        // Default shortcut: Ctrl+Shift+F
+        if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'f') {
+            e.preventDefault();
+            if (VFB.elements.toolbar) {
+                const collapsed = VFB.elements.toolbar.querySelector('.vfb-toolbar-collapsed');
+                if (collapsed.style.display !== 'none') {
+                    expandToolbar();
+                } else {
+                    collapseToolbar();
+                }
+            }
+        }
+
+        // Escape to deactivate tool
+        if (e.key === 'Escape' && VFB.isActive) {
+            deactivateTool();
+        }
+    }
+
+    // ========================================
+    // Initialization - 初始化
+    // ========================================
+
+    function init() {
+        // Check if already initialized
+        if (document.querySelector('.vfb-toolbar')) return;
+
+        createToolbar();
+
+        // Auto-enter dev mode for admins
+        if (cfg.isAdmin && VFB.isDevMode) {
+            const toolbar = VFB.elements.toolbar;
+            if (toolbar) toolbar.classList.add('vfb-dev-mode');
+            const devBtnInit = document.getElementById('vfb-dev');
+            if (devBtnInit) {
+                devBtnInit.classList.add('active');
+                devBtnInit.setAttribute('data-tooltip', 'Exit Dev Mode');
+            }
+        }
+
+        loadAnnotations();
+
+        document.addEventListener('keydown', handleKeyboard);
+
+        // Update markers on scroll/resize (throttled)
+        let scrollTimeout = null;
+        const throttledRender = () => {
+            if (scrollTimeout) return;
+            scrollTimeout = setTimeout(() => {
+                renderPageMarkers();
+                scrollTimeout = null;
+            }, 100);
+        };
+        window.addEventListener('scroll', throttledRender);
+        window.addEventListener('resize', throttledRender);
+    }
+
+    // Auto-init when DOM ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
+    // Expose to global
+    window.VFB = VFB;
+
+})();

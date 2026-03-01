@@ -1,0 +1,1085 @@
+/**
+ * Visual Feedback Tool Styles
+ * 视觉反馈工具样式
+ * Version: 1.4
+ */
+
+/* ========================================
+   Toolbar - 工具栏
+   ======================================== */
+.vfb-toolbar {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 99999;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 13px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.vfb-toolbar-collapsed {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    transition: all 0.3s ease;
+}
+
+.vfb-toolbar-collapsed:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+}
+
+.vfb-toolbar-collapsed svg {
+    width: 20px;
+    height: 20px;
+    fill: white;
+}
+
+/* Badge count */
+.vfb-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: #dc3545;
+    color: white;
+    font-size: 10px;
+    font-weight: 600;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    border: 2px solid white;
+}
+
+.vfb-toolbar-expanded {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+    border-radius: 24px;
+    padding: 6px 10px;
+    box-shadow: 0 4px 20px rgba(255, 107, 53, 0.4);
+    animation: vfb-slideLeft 0.3s ease;
+}
+
+@keyframes vfb-slideLeft {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Divider */
+.vfb-divider {
+    width: 1px;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.4);
+    margin: 0 4px;
+}
+
+/* Tool buttons */
+.vfb-tool-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    position: relative;
+}
+
+.vfb-tool-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+    color: white;
+}
+
+.vfb-tool-btn.active {
+    background: rgba(255, 255, 255, 0.35);
+    color: white;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
+}
+
+.vfb-tool-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}
+
+/* Special button styles */
+.vfb-btn-save:hover {
+    background: rgba(40, 167, 69, 0.8);
+    color: white;
+}
+
+.vfb-btn-close:hover {
+    background: rgba(220, 53, 69, 0.8);
+    color: white;
+}
+
+/* Tooltip for tool buttons */
+.vfb-tool-btn::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s, visibility 0.2s;
+    margin-bottom: 6px;
+    pointer-events: none;
+}
+
+.vfb-tool-btn:hover::after {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* ========================================
+   Overlay - 标注覆盖层
+   ======================================== */
+.vfb-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 99990;
+    cursor: crosshair;
+    pointer-events: auto;
+}
+
+.vfb-highlight {
+    position: absolute;
+    border: 2px solid #667eea;
+    background: rgba(102, 126, 234, 0.1);
+    pointer-events: none;
+    z-index: 99991;
+    transition: all 0.1s ease;
+}
+
+.vfb-highlight-label {
+    position: absolute;
+    top: -24px;
+    left: 0;
+    background: #667eea;
+    color: white;
+    padding: 2px 8px;
+    font-size: 11px;
+    border-radius: 4px;
+    white-space: nowrap;
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ========================================
+   Comment Modal - 评论弹窗
+   ======================================== */
+.vfb-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 99995;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: vfb-fadeIn 0.2s ease;
+}
+
+@keyframes vfb-fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.vfb-modal {
+    background: white;
+    border-radius: 10px;
+    width: 360px;
+    max-width: 90%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: vfb-scaleIn 0.2s ease;
+}
+
+@keyframes vfb-scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.vfb-modal-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.vfb-modal-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: #333;
+}
+
+.vfb-modal-close {
+    background: none;
+    border: none;
+    font-size: 18px;
+    color: #999;
+    cursor: pointer;
+    padding: 2px;
+}
+
+.vfb-modal-close:hover {
+    color: #333;
+}
+
+.vfb-modal-body {
+    padding: 16px;
+}
+
+.vfb-modal-info {
+    background: #f8f9fa;
+    padding: 10px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    font-size: 11px;
+    color: #666;
+}
+
+.vfb-modal-info code {
+    background: #e9ecef;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-family: monospace;
+    font-size: 10px;
+    word-break: break-all;
+}
+
+.vfb-textarea {
+    width: 100%;
+    min-height: 80px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 13px;
+    resize: vertical;
+    font-family: inherit;
+}
+
+.vfb-textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.vfb-modal-footer {
+    padding: 12px 16px;
+    border-top: 1px solid #eee;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+/* ========================================
+   Screenshot Editor - 截图编辑器
+   ======================================== */
+.vfb-screenshot-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 99998;
+    display: flex;
+    flex-direction: column;
+}
+
+.vfb-screenshot-toolbar {
+    background: #1a1a2e;
+    padding: 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.vfb-screenshot-toolbar-left {
+    display: flex;
+    gap: 10px;
+    flex: 1;
+}
+
+.vfb-screenshot-toolbar-center {
+    display: flex;
+    justify-content: center;
+    flex: 1;
+}
+
+.vfb-screenshot-toolbar-right {
+    display: flex;
+    gap: 10px;
+    flex: 1;
+    justify-content: flex-end;
+}
+
+.vfb-screenshot-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+
+.vfb-screenshot-btn-default {
+    background: #2d2d44;
+    color: #fff;
+}
+
+.vfb-screenshot-btn-default:hover {
+    background: #3d3d5c;
+}
+
+.vfb-screenshot-btn-primary {
+    background: #667eea;
+    color: white;
+}
+
+.vfb-screenshot-btn-primary:hover {
+    background: #5a6fd6;
+}
+
+.vfb-screenshot-btn-danger {
+    background: #dc3545;
+    color: white;
+}
+
+.vfb-screenshot-btn-danger:hover {
+    background: #c82333;
+}
+
+.vfb-screenshot-canvas-container {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: auto;
+    padding: 20px;
+}
+
+.vfb-screenshot-canvas {
+    max-width: 100%;
+    max-height: 100%;
+    border: 2px solid #333;
+    cursor: crosshair;
+}
+
+.vfb-screenshot-hint {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.7);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+}
+
+/* Screenshot Tool Group */
+.vfb-ss-tool-group {
+    display: flex;
+    gap: 2px;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 3px;
+    border-radius: 5px;
+}
+
+.vfb-ss-tool {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    color: #fff;
+    transition: all 0.2s;
+}
+
+.vfb-ss-tool svg {
+    width: 16px;
+    height: 16px;
+}
+
+.vfb-ss-tool:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.vfb-ss-tool.active {
+    background: #667eea;
+    color: white;
+}
+
+.vfb-ss-divider {
+    width: 1px;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.3);
+    margin: 0 6px;
+}
+
+/* Screenshot Text Input */
+.vfb-ss-text-input-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 100000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.vfb-ss-text-input-box {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    min-width: 300px;
+}
+
+.vfb-ss-text-input-box input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    margin-bottom: 12px;
+}
+
+.vfb-ss-text-input-box input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.vfb-ss-text-input-btns {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.vfb-ss-text-input-btns button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+}
+
+.vfb-ss-text-cancel {
+    background: #6c757d;
+    color: white;
+}
+
+.vfb-ss-text-cancel:hover {
+    background: #5a6268;
+}
+
+.vfb-ss-text-ok {
+    background: #667eea;
+    color: white;
+}
+
+.vfb-ss-text-ok:hover {
+    background: #5a6fd6;
+}
+
+/* ========================================
+   Page Markers - 页面标记点
+   ======================================== */
+.vfb-marker {
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
+    z-index: 99990;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s;
+    border: 2px solid white;
+    pointer-events: auto;
+}
+
+.vfb-marker:hover {
+    transform: scale(1.2);
+}
+
+.vfb-marker.element {
+    background: #667eea;
+}
+
+.vfb-marker.text {
+    background: #28a745;
+}
+
+.vfb-marker.screenshot {
+    background: #fd7e14;
+}
+
+/* ========================================
+   List Button Count - 列表按钮计数
+   ======================================== */
+.vfb-list-count {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: #dc3545;
+    color: white;
+    font-size: 9px;
+    font-weight: 600;
+    min-width: 14px;
+    height: 14px;
+    border-radius: 7px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 0 3px;
+}
+
+/* ========================================
+   List Panel - 列表面板
+   ======================================== */
+.vfb-list-panel {
+    position: fixed;
+    bottom: 70px;
+    right: 20px;
+    width: 280px;
+    max-height: 300px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+    animation: vfb-slideUp 0.2s ease;
+    z-index: 99998;
+}
+
+@keyframes vfb-slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.vfb-list-empty {
+    padding: 20px;
+    text-align: center;
+    color: #999;
+    font-size: 13px;
+}
+
+.vfb-list-items {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.vfb-list-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    transition: background 0.2s;
+    gap: 8px;
+}
+
+.vfb-list-item:last-child {
+    border-bottom: none;
+}
+
+.vfb-list-item:hover {
+    background: #f8f9fa;
+}
+
+.vfb-list-item-num {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #667eea;
+    color: white;
+    font-size: 10px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.vfb-list-item-icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+.vfb-list-item-icon svg {
+    width: 16px;
+    height: 16px;
+    fill: #666;
+}
+
+.vfb-list-item-summary {
+    flex: 1;
+    font-size: 12px;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.vfb-list-item-comment {
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+.vfb-list-item-resolved {
+    font-size: 14px;
+    font-weight: bold;
+    color: #28a745;
+    flex-shrink: 0;
+    margin-left: 4px;
+}
+
+.vfb-list-item-is-resolved {
+    opacity: 0.7;
+}
+
+.vfb-list-item-is-resolved .vfb-list-item-summary {
+    text-decoration: line-through;
+    color: #888;
+}
+
+/* ========================================
+   Detail Modal Extras - 详情弹窗额外样式
+   ======================================== */
+.vfb-detail-type,
+.vfb-detail-text,
+.vfb-detail-selector,
+.vfb-detail-context {
+    margin-bottom: 6px;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.vfb-detail-selector code {
+    background: #e9ecef;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-family: monospace;
+    font-size: 10px;
+    word-break: break-all;
+}
+
+.vfb-detail-image {
+    margin-top: 8px;
+}
+
+.vfb-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+
+.vfb-btn-primary {
+    background: #667eea;
+    color: white;
+}
+
+.vfb-btn-primary:hover {
+    background: #5a6fd6;
+}
+
+.vfb-btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.vfb-btn-secondary:hover {
+    background: #5a6268;
+}
+
+.vfb-btn-danger {
+    background: #dc3545;
+    color: white;
+}
+
+.vfb-btn-danger:hover {
+    background: #c82333;
+}
+
+.vfb-btn svg {
+    width: 14px;
+    height: 14px;
+    fill: currentColor;
+}
+
+/* ========================================
+   Toast - 提示消息
+   ======================================== */
+.vfb-toast {
+    position: fixed;
+    bottom: 70px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 12px;
+    z-index: 999999;
+    animation: vfb-toastIn 0.3s ease;
+}
+
+.vfb-toast.success {
+    background: #28a745;
+}
+
+.vfb-toast.error {
+    background: #dc3545;
+}
+
+@keyframes vfb-toastIn {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+/* ========================================
+   Text Selection - 文本选择
+   ======================================== */
+.vfb-text-selection {
+    background: rgba(40, 167, 69, 0.3);
+    border-bottom: 2px solid #28a745;
+}
+
+/* ========================================
+   Region Selector - 区域选择器
+   ======================================== */
+.vfb-region-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 99999;
+    cursor: crosshair;
+}
+
+.vfb-region-hint {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    z-index: 100000;
+    pointer-events: none;
+}
+
+.vfb-region-box {
+    position: fixed;
+    border: 2px dashed #ff6b35;
+    background: rgba(255, 107, 53, 0.1);
+    display: none;
+    z-index: 100000;
+    pointer-events: none;
+}
+
+/* ========================================
+   Locate Highlight - 定位高亮
+   ======================================== */
+.vfb-locate-highlight {
+    outline: 4px solid #ff6b35 !important;
+    outline-offset: 6px !important;
+    animation: vfb-highlight-blink 0.5s ease-in-out infinite !important;
+    background-color: rgba(255, 107, 53, 0.2) !important;
+    box-shadow:
+        0 0 0 6px rgba(255, 107, 53, 0.4),
+        0 0 0 12px rgba(255, 107, 53, 0.2),
+        0 0 30px rgba(255, 107, 53, 0.5),
+        inset 0 0 20px rgba(255, 107, 53, 0.1) !important;
+}
+
+@keyframes vfb-highlight-blink {
+    0%, 100% {
+        outline-color: #ff6b35;
+        outline-width: 4px;
+    }
+    50% {
+        outline-color: #ffd700;
+        outline-width: 6px;
+    }
+}
+
+/* Locate Loading Indicator - 定位加载指示器 */
+#vfb-locate-loading {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    z-index: 999999;
+    animation: vfb-fadeIn 0.2s ease;
+}
+
+.vfb-locate-loading-spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: vfb-spin 0.8s linear infinite;
+}
+
+@keyframes vfb-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ========================================
+   Info Button - 信息按钮
+   ======================================== */
+.vfb-btn-info {
+    background: #17a2b8;
+    color: white;
+}
+
+.vfb-btn-info:hover {
+    background: #138496;
+}
+
+/* ========================================
+   Status Badge - 状态标签
+   ======================================== */
+.vfb-status-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 500;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
+.vfb-status-pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.vfb-status-in_progress {
+    background: #cce5ff;
+    color: #004085;
+}
+
+.vfb-status-resolved {
+    background: #d4edda;
+    color: #155724;
+}
+
+/* Developer Response - 开发者回复 */
+.vfb-dev-response {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed #ddd;
+}
+
+/* Developer Mode - 开发者模式 */
+.vfb-toolbar.vfb-dev-mode .vfb-toolbar-expanded {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.vfb-toolbar.vfb-dev-mode .vfb-toolbar-collapsed {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+#vfb-dev.active {
+    background: rgba(255, 255, 255, 0.35);
+    color: #ffd700;
+}
+
+.vfb-dev-controls {
+    background: #f8f9ff;
+    margin: 12px -16px -16px -16px;
+    padding: 12px 16px 16px 16px;
+    border-radius: 0 0 10px 10px;
+}
+
+/* ========================================
+   Image Lightbox - 图片灯箱
+   ======================================== */
+.vfb-lightbox {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.95);
+    z-index: 999999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: zoom-out;
+    animation: vfb-fadeIn 0.2s ease;
+}
+
+.vfb-lightbox-content {
+    position: relative;
+    max-width: 95%;
+    max-height: 95%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.vfb-lightbox-img {
+    max-width: 100%;
+    max-height: 90vh;
+    object-fit: contain;
+    border-radius: 4px;
+    box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5);
+}
+
+.vfb-lightbox-close {
+    position: absolute;
+    top: -40px;
+    right: 0;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 32px;
+    cursor: pointer;
+    padding: 5px 10px;
+    line-height: 1;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+
+.vfb-lightbox-close:hover {
+    opacity: 1;
+}
+
+.vfb-lightbox-hint {
+    position: absolute;
+    bottom: -35px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+/* ========================================
+   Responsive - 响应式
+   ======================================== */
+@media (max-width: 480px) {
+    .vfb-toolbar {
+        bottom: 12px;
+        right: 12px;
+    }
+
+    .vfb-toolbar-expanded {
+        padding: 4px 8px;
+        gap: 2px;
+    }
+
+    .vfb-tool-btn {
+        width: 28px;
+        height: 28px;
+    }
+
+    .vfb-tool-btn svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    .vfb-divider {
+        height: 20px;
+        margin: 0 2px;
+    }
+}
