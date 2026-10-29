@@ -123,8 +123,12 @@
             height = maxHeight;
         }
 
-        this.canvas.width = width;
-        this.canvas.height = height;
+        // Keep the source resolution; CSS scales the canvas down to fit the window.
+        this.ratio = this.originalImage.width / width;
+        this.canvas.width = this.originalImage.width;
+        this.canvas.height = this.originalImage.height;
+        this.canvas.style.width = width + 'px';
+        this.canvas.style.height = height + 'px';
 
         // Draw original image
         this.redraw();
@@ -180,8 +184,7 @@
             self.currentAnnotation.endX = currentX;
             self.currentAnnotation.endY = currentY;
 
-            self.redraw();
-            self.drawAnnotation(self.currentAnnotation, true);
+            self.redraw(self.currentAnnotation);
         });
 
         canvas.addEventListener('mouseup', () => {
@@ -351,20 +354,26 @@
     /**
      * Redraw canvas
      */
-    EFAScreenshot.redraw = function() {
+    EFAScreenshot.redraw = function(tempAnnotation) {
         const ctx = this.ctx;
         const canvas = this.canvas;
 
         // Clear canvas
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Draw original image
+        // Draw original image at full resolution
         ctx.drawImage(this.originalImage, 0, 0, canvas.width, canvas.height);
 
-        // Draw all annotations
+        // Annotations live in display coordinates → scale them onto the full-size canvas
+        ctx.save();
+        ctx.scale(this.ratio || 1, this.ratio || 1);
         this.annotations.forEach(ann => {
             this.drawAnnotation(ann, false);
         });
+        if (tempAnnotation) {
+            this.drawAnnotation(tempAnnotation, true);
+        }
+        ctx.restore();
     };
 
     /**

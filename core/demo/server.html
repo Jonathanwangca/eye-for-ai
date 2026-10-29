@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eye for AI — with the PHP server</title>
+<link rel="stylesheet" href="../eye-for-ai.css">
+<style>
+    body { margin: 0; padding: 24px; font: 14px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; background: #f4f5f7; color: #1f2937; }
+    @media (prefers-color-scheme: dark) { body { background: #15181c; color: #e5e7eb; } .card { background: #1f2329 !important; border-color: #30353d !important; } }
+    .card { max-width: 760px; margin: 0 auto 16px; background: #fff; border: 1px solid #e3e6ea; border-radius: 10px; padding: 18px 20px; }
+    code { background: rgba(127,127,127,.15); padding: 1px 5px; border-radius: 4px; }
+    #total { font-size: 22px; font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="card">
+    <h1 style="margin-top:0;font-size:18px">Checkout <small style="font-weight:400;color:#6b7280">billing · v1.4.0</small></h1>
+    <p>Order total: <span id="total">$0.00</span></p>
+    <p>Reports go to <code>../server/php/index.php</code> (SQLite, see <code>server/php/config.sample.php</code>).
+       Run it with <code>php -S 127.0.0.1:8080 -t core</code> from the repository root and open
+       <code>http://127.0.0.1:8080/demo/server.html</code>.</p>
+</div>
+<script src="../vendor/html2canvas.min.js" defer></script>
+<script src="../eye-for-ai-annotate.js" defer></script>
+<script src="../eye-for-ai-capture.js" defer></script>
+<script>
+    window.EyeForAIConfig = {
+        endpoint: '../server/php/index.php',
+        assetsUrl: '../',
+        scope: { id: 'billing', label: 'Billing', version: '1.4.0' }
+    };
+</script>
+<script src="../eye-for-ai.js" defer></script>
+</body>
+</html>

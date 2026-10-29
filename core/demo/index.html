@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eye for AI — live demo</title>
+<link rel="stylesheet" href="../eye-for-ai.css">
+<style>
+    :root { --bg: #f4f5f7; --card: #fff; --line: #e3e6ea; --ink: #1f2937; --soft: #6b7280; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #15181c; --card: #1f2329; --line: #30353d; --ink: #e5e7eb; --soft: #9ca3af; } }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+    header { display: flex; align-items: center; gap: 12px; padding: 14px 20px; background: var(--card); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+    header h1 { font-size: 16px; margin: 0; }
+    header .sp { flex: 1; }
+    header label { color: var(--soft); font-size: 12px; display: inline-flex; gap: 6px; align-items: center; }
+    main { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; padding: 16px 20px; max-width: 1280px; margin: 0 auto; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+    .card h2 { margin: 0 0 10px; font-size: 15px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); }
+    th { color: var(--soft); font-weight: 600; font-size: 12px; }
+    .price { font-variant-numeric: tabular-nums; }
+    form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    input, select { width: 100%; padding: 7px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); font: inherit; }
+    .btn { padding: 7px 14px; border: 0; border-radius: 6px; background: #2563eb; color: #fff; font: 600 13px system-ui; cursor: pointer; }
+    .muted { color: var(--soft); font-size: 12px; }
+    .console .row { border-bottom: 1px solid var(--line); padding: 8px 0; display: grid; gap: 4px; }
+    .console .row:last-child { border-bottom: 0; }
+    .console .acts { display: flex; gap: 6px; flex-wrap: wrap; }
+    .console button { padding: 3px 9px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--ink); font: 12px system-ui; cursor: pointer; }
+    .tip { background: #fff7ed; border-color: #fed7aa; color: #7c2d12; }
+    @media (prefers-color-scheme: dark) { .tip { background: #2a1d12; border-color: #7c2d12; color: #fed7aa; } }
+    @media (max-width: 900px) { main { grid-template-columns: minmax(0, 1fr); } form { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+    <h1>Northwind Tours · Bookings</h1>
+    <span class="muted">demo app · v1.4.0</span>
+    <span class="sp"></span>
+    <label>Language <select id="lang"><option value="en">English</option><option value="zh-CN">简体中文</option></select></label>
+    <label>Accent <input id="accent" type="color" value="#f97316" style="width:42px;padding:0;height:26px"></label>
+</header>
+
+<main>
+    <div>
+        <div class="card tip">
+            <b>Try it:</b> click the eye (bottom-right) → pick <b>Element</b>, <b>Text</b> or <b>Screenshot</b>, describe the problem, send.
+            Then play the AI on the right: triage it, resolve it, and verify the fix as the reporter.
+            Everything stays in this browser (localStorage) — no server.
+        </div>
+
+        <div class="card">
+            <h2>Upcoming departures</h2>
+            <table>
+                <thead><tr><th>Tour Code</th><th>Tour</th><th>Departs</th><th>Pax</th><th class="price">Price</th></tr></thead>
+                <tbody>
+                    <tr><td>NW-1042</td><td>Aurora Nights, 3D2N</td><td>2026-11-14</td><td>12</td><td class="price">$1,235.00</td></tr>
+                    <tr><td>NW-1043</td><td>Lakeside Lodge Escape</td><td>2026-11-15</td><td>4</td><td class="price">$880.00</td></tr>
+                    <tr><td>NW-1044</td><td>City Lights Walking Tour</td><td>2026-11-15</td><td>18</td><td class="price">$95.00</td></tr>
+                    <tr><td>NW-1045</td><td>Glacier Day Trip</td><td>2026-11-17</td><td>9</td><td class="price">$310.00</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2>New booking</h2>
+            <form onsubmit="return false">
+                <label>Lead traveler<input value="Jordan Lee"></label>
+                <label>Tour<select><option>Aurora Nights, 3D2N</option><option>Glacier Day Trip</option></select></label>
+                <label>Arrival<input type="date" value="2026-11-14"></label>
+                <label>Travelers<input type="number" value="2"></label>
+                <div><button class="btn">Save booking</button></div>
+            </form>
+            <p class="muted">Cancellation policy: full refund up to 14 days before departue; 50% within 14 days.</p>
+        </div>
+    </div>
+
+    <aside>
+        <div class="card console">
+            <h2>Developer / AI console</h2>
+            <p class="muted">What your AI agent does through the API. Here it acts on the browser store.</p>
+            <div id="console"></div>
+            <div class="acts" style="margin-top:8px"><button id="reset">Clear demo data</button></div>
+        </div>
+    </aside>
+</main>
+
+<script src="../vendor/html2canvas.min.js" defer></script>
+<script src="../eye-for-ai-annotate.js" defer></script>
+<script src="../eye-for-ai-capture.js" defer></script>
+<script src="../adapters/local.js" defer></script>
+<script src="../eye-for-ai.js" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var lang = localStorage.getItem('efa-demo-lang') || 'en';
+    var accent = localStorage.getItem('efa-demo-accent') || '#f97316';
+    document.getElementById('lang').value = lang;
+    document.getElementById('accent').value = accent;
+
+    function start() {
+        EyeForAI.destroy();
+        EyeForAI.init({
+            adapter: EyeForAILocal.adapter({ user: { id: 'demo', name: 'Demo user' } }),
+            assetsUrl: '../',
+            scope: { id: 'bookings', label: 'Bookings', version: '1.4.0' },
+            locale: lang,
+            theme: { accent: accent },
+            onEvent: function () { renderConsole(); }
+        });
+    }
+
+    function esc(v) { var d = document.createElement('div'); d.textContent = v == null ? '' : v; return d.innerHTML; }
+
+    function renderConsole() {
+        var box = document.getElementById('console');
+        var items = EyeForAILocal.all().slice().reverse();
+        box.innerHTML = items.length ? items.map(function (b) {
+            return '<div class="row"><div><b>' + esc(b.key) + '</b> ' + esc(b.priority) + ' · ' + esc(b.title) + '</div>' +
+                '<div class="muted">' + esc(b.status) + (b.resolution ? ' · ' + esc(b.resolution) : '') + ' · ' + esc(b.capture_type) + '</div>' +
+                '<div class="acts">' +
+                (b.status === 'new' ? '<button data-id="' + b.id + '" data-act="triage">Triage</button>' : '') +
+                (b.status === 'new' || b.status === 'triaged' ? '<button data-id="' + b.id + '" data-act="work">Start work</button>' : '') +
+                (b.status !== 'resolved' && b.status !== 'closed' ? '<button data-id="' + b.id + '" data-act="resolve">Resolve with AI note</button>' : '') +
+                '</div></div>';
+        }).join('') : '<p class="muted">No reports yet.</p>';
+    }
+
+    document.getElementById('console').addEventListener('click', function (e) {
+        var btn = e.target.closest('button[data-act]');
+        if (!btn) return;
+        var id = btn.dataset.id;
+        if (btn.dataset.act === 'triage') EyeForAILocal.act(id, { status: 'triaged', note: 'Confirmed on the bookings page.' });
+        if (btn.dataset.act === 'work') EyeForAILocal.act(id, { status: 'in_progress' });
+        if (btn.dataset.act === 'resolve') EyeForAILocal.act(id, {
+            status: 'resolved', resolution: 'fixed', fix_version: '1.4.1',
+            ai_analysis: 'The reported element is rendered by the bookings template; the issue reproduces at the captured viewport.',
+            ai_solution: 'Patched the template and added a regression check. Please verify on the page.',
+            note: 'Fixed in v1.4.1'
+        });
+        renderConsole();
+        EyeForAI.reload();
+    });
+    document.getElementById('reset').addEventListener('click', function () { EyeForAILocal.clear(); renderConsole(); EyeForAI.reload(); });
+    document.getElementById('lang').addEventListener('change', function (e) { lang = e.target.value; localStorage.setItem('efa-demo-lang', lang); start(); });
+    document.getElementById('accent').addEventListener('input', function (e) { accent = e.target.value; localStorage.setItem('efa-demo-accent', accent); start(); });
+
+    start();
+    renderConsole();
+});
+</script>
+</body>
+</html>

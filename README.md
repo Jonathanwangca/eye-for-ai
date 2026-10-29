@@ -5,8 +5,17 @@
 <h1 align="center">Eye for AI</h1>
 
 <p align="center">
-  <strong>WordPress visual feedback plugin with AI-friendly REST API.</strong>
+  <strong>Visual feedback that AI agents can act on — for any website.</strong>
 </p>
+
+> **New in 2.0 — the Core edition** ([`core/`](core/)): one widget for **any site and any backend**.
+> Draggable launcher, native tab-capture screenshots (several per report, full resolution),
+> P1–P4 with a standard ticket workflow and reporter verification, an AI-ready Markdown export,
+> English / 简体中文, themeable, zero dependencies. Comes with a
+> [10-second browser demo](core/demo/index.html), a [single-file PHP + SQLite server](core/server/php/)
+> and a [backend contract](core/BACKEND-CONTRACT.md). Start with [core/README.md](core/README.md).
+>
+> The WordPress plugin below (1.x) keeps working as before.
 
 Visitors and team members annotate page elements, highlight text, and capture marked-up screenshots. All feedback is stored in the WordPress database with full URL, element position, and viewport context — ready for AI agents to consume and triage automatically.
 
@@ -402,23 +411,20 @@ eye-for-ai/
 
 ---
 
-## Two Editions
+## Editions
 
-Eye for AI exists in two editions for different environments:
+| | **Core** (recommended) | WordPress plugin | Standalone (legacy) |
+|---|---|---|---|
+| **Location** | [`core/`](core/) | repository root | [`standalone/`](standalone/) |
+| **Version** | 2.0.0 | 1.2.0 | 1.x |
+| **Backend** | any: REST [contract](core/BACKEND-CONTRACT.md), custom adapter, or the bundled PHP + SQLite server | WordPress database | PHP + MySQL (`api/feedback.php`) |
+| **Workflow** | P1–P4 · New → Triaged → In Progress → Resolved → Closed · reporter verifies | Pending → In Progress → Resolved → Won't Fix | pending → ai_analyzed → … |
+| **Screenshots** | native tab capture, up to 6 per report, full resolution, paste / drop / upload | html2canvas, one per annotation | html2canvas, one per annotation |
+| **AI API** | Bearer token, queue + PATCH + Markdown | `/ai/pending`, `/ai/batch` | `X-EFA-API-Key` |
+| **i18n / theming** | en + zh-CN, one accent colour, light/dark | — | — |
 
-| | WordPress Edition | Standalone Edition |
-|---|---|---|
-| **Location** | `eye-for-ai/` plugin | `euro/assets/efa/` |
-| **Storage** | WordPress database | File system (`/data/`) |
-| **API** | WP REST API (`/wp-json/eye-for-ai/v1/`) | Plain PHP (`/api/feedback.php`) |
-| **Auth** | WP nonce + capabilities | Session-based / password |
-| **AI API** | Built-in (`/ai/pending`, `/ai/batch`) | Not available |
-| **Position tracking** | Full URL + viewport + scroll + rect | Full URL + viewport + scroll + rect |
-| **Use case** | WordPress sites | Any PHP site (ScriptCase, Laravel, etc.) |
-
-Both editions share the same unified frontend core (`efa.js`, `efa-screenshot.js`, `efa.css`) with dual `apiMode` support (`rest` for WordPress, `standalone` for plain PHP).
-
----
+New integrations should use Core. 2.0 also brings its full-resolution screenshot fix to the
+WordPress and standalone annotators (`efa-screenshot.js`). See [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 
